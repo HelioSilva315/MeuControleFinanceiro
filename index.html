@@ -225,6 +225,11 @@
   .tx-amt{font-size:14.5px;font-weight:640;white-space:nowrap;font-variant-numeric:tabular-nums;margin-left:8px}
   .tx-amt.in{color:var(--pos)}
   .tx-amt.out{color:var(--neg)}
+  .tx-actions{display:flex;gap:2px;margin-left:2px;flex:none}
+  .tx-act{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;color:var(--faint);transition:.15s}
+  .tx-act:hover{background:var(--surface);color:var(--ink-soft)}
+  .tx-act.danger:hover{background:var(--neg-soft);color:var(--neg)}
+  .tx-act svg{width:16px;height:16px}
 
   .empty{text-align:center;padding:44px 20px;border:1px dashed var(--line-2);border-radius:var(--radius);background:var(--surface)}
   .empty svg{width:44px;height:44px;color:var(--line-2);margin-bottom:12px}
@@ -1190,13 +1195,19 @@
         row.innerHTML =
           '<span class="tx-ic" style="--c:' + c.color + '">' + icon(c.icon) + "</span>" +
           '<span class="tx-body"><span class="tx-title"></span><span class="tx-meta"></span></span>' +
-          '<span class="tx-amt num"></span>';
+          '<span class="tx-amt num"></span>' +
+          '<span class="tx-actions">' +
+            '<button type="button" class="tx-act" data-edit aria-label="Editar lançamento"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>' +
+            '<button type="button" class="tx-act danger" data-del aria-label="Excluir lançamento"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="m19 6-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6"/></svg></button>' +
+          '</span>';
         var dv = t.dividaId ? debtById(t.dividaId) : null;
         row.querySelector(".tx-title").textContent = t.descricao || c.label;
         row.querySelector(".tx-meta").textContent = (dv ? "Parcela \u00b7 " : "") + c.label;
         var amt = row.querySelector(".tx-amt");
         amt.classList.add(t.tipo === "entrada" ? "in" : "out");
         amt.textContent = (t.tipo === "entrada" ? "+ " : "\u2212 ") + fmtBRL(t.valor);
+        row.querySelector("[data-edit]").addEventListener("click", function (e) { e.stopPropagation(); openForm(t); });
+        row.querySelector("[data-del]").addEventListener("click", function (e) { e.stopPropagation(); deleteTransaction(t); });
         row.addEventListener("click", function () { openForm(t); });
         row.addEventListener("keydown", function (e) {
           if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openForm(t); }
@@ -1310,16 +1321,19 @@
     setTimeout(function () { $("valor").focus(); }, 320);
   }
 
-  function onDelete() {
-    var id = state.editingId;
-    if (!id) return;
+  function deleteTransaction(tx) {
+    if (!tx) return;
     confirmDialog("Excluir lançamento", "Esta ação não pode ser desfeita.").then(function (ok) {
       if (!ok) return;
-      var tx = state.transacoes.filter(function (t) { return t.id === id; })[0];
-      if (tx) { tx.deleted = true; tx.updatedAt = Date.now(); }
+      tx.deleted = true; tx.updatedAt = Date.now();
       pruneTombstones();
       save(); render(); closeSheets(); toast("Lançamento excluído");
     });
+  }
+
+  function onDelete() {
+    var tx = state.transacoes.filter(function (t) { return t.id === state.editingId; })[0];
+    deleteTransaction(tx);
   }
 
   $("form").addEventListener("submit", function (e) {
