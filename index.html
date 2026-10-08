@@ -294,6 +294,28 @@
   .cat:has(input:checked) svg{color:var(--btn-ink)}
   .cat:has(input:checked) span{color:var(--btn-ink)}
   .cat:has(input:focus-visible){box-shadow:var(--ring)}
+  .cat-add{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;margin-top:10px;padding:11px;border:1px dashed var(--line);border-radius:14px;background:transparent;color:var(--muted);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;transition:.18s}
+  .cat-add svg{width:15px;height:15px}
+  .cat-add:hover{border-color:var(--btn-bg);color:var(--ink);background:var(--surface)}
+
+  .icon-pick{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+  .icon-opt{display:flex;align-items:center;justify-content:center;aspect-ratio:1;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--muted);cursor:pointer;transition:.15s}
+  .icon-opt svg{width:19px;height:19px}
+  .icon-opt.sel{border-color:var(--btn-bg);background:var(--btn-bg);color:var(--btn-ink)}
+
+  .color-pick{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;padding:2px}
+  .color-opt{position:relative;aspect-ratio:1;border:none;border-radius:50%;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);transition:.15s}
+  .color-opt.sel{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--ink)}
+
+  .cat-manage{margin-top:18px;border-top:1px solid var(--line);padding-top:12px}
+  .cat-manage-title{font-size:11.5px;font-weight:600;color:var(--faint);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+  .cat-manage-row{display:flex;align-items:center;gap:11px;padding:7px 0}
+  .cm-ic{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:10px;flex:none;color:var(--c);background:color-mix(in srgb,var(--c) 14%,var(--tint-base))}
+  .cm-ic svg{width:16px;height:16px}
+  .cm-name{flex:1;font-size:13.5px;color:var(--ink)}
+  .cm-del{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border:1px solid var(--line);border-radius:10px;background:transparent;color:var(--neg);cursor:pointer;transition:.15s;flex:none}
+  .cm-del svg{width:15px;height:15px}
+  .cm-del:hover{background:color-mix(in srgb,var(--neg) 15%,var(--surface));border-color:color-mix(in srgb,var(--neg) 35%,var(--line))}
 
   .row-actions{display:grid;grid-template-columns:1fr;gap:10px;margin-top:6px}
   .row-actions.two{grid-template-columns:1fr auto}
@@ -324,6 +346,8 @@
   .sync-code-value{font-size:17px;font-weight:680;letter-spacing:.07em;margin-top:3px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
   .sync-status{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:12.5px;color:var(--muted)}
   .sync-note{font-size:12px;color:var(--faint);margin-top:12px;line-height:1.5}
+  .sync-finger{font-size:12px;color:var(--faint);margin-top:6px}
+  .sync-finger strong{color:var(--muted);letter-spacing:.08em}
 
   /* ---------- Toast ---------- */
   .toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translate(-50%,20px);z-index:80;background:var(--btn-bg);color:var(--btn-ink);font-size:13.5px;font-weight:550;padding:11px 18px;border-radius:12px;box-shadow:0 12px 30px -10px rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:.28s;max-width:90vw;text-align:center}
@@ -546,6 +570,10 @@
     <div class="field">
       <label>Categoria</label>
       <div class="cats" id="cats"></div>
+      <button type="button" class="cat-add" id="catAddBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+        Nova categoria
+      </button>
     </div>
 
     <div class="field">
@@ -557,6 +585,33 @@
       <button type="submit" class="btn btn-primary btn-block" id="saveBtn">Salvar lançamento</button>
     </div>
   </form>
+</div>
+
+<!-- Category sheet -->
+<div class="sheet" id="catSheet" role="dialog" aria-modal="true" aria-labelledby="catTitle">
+  <div class="grip"></div>
+  <div class="sheet-head">
+    <h2 id="catTitle">Nova categoria</h2>
+    <button class="close" data-close aria-label="Fechar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    </button>
+  </div>
+  <div class="field">
+    <label for="catName">Nome</label>
+    <input class="input" id="catName" maxlength="24" autocomplete="off" placeholder="Ex.: Pets, Presentes, Farmácia">
+  </div>
+  <div class="field">
+    <label>Ícone</label>
+    <div class="icon-pick" id="catIcons"></div>
+  </div>
+  <div class="field">
+    <label>Cor</label>
+    <div class="color-pick" id="catColors"></div>
+  </div>
+  <div class="row-actions">
+    <button type="button" class="btn btn-primary btn-block" id="catSaveBtn">Salvar categoria</button>
+  </div>
+  <div id="catManage"></div>
 </div>
 
 <!-- Debt sheet -->
@@ -637,11 +692,13 @@
         <button class="btn btn-ghost" id="syncReveal">Mostrar</button>
       </div>
       <div class="sync-status"><span class="dot off" id="syncDotPanel"></span><span id="syncStatusText">Conectando...</span></div>
+      <div class="sync-finger">Canal: <strong id="syncFinger">----</strong> · confira se é igual no outro aparelho</div>
       <div class="set-actions" style="margin-top:12px">
         <button class="btn btn-ghost" id="syncCopy">Copiar código</button>
         <button class="btn btn-ghost" id="syncSend">Enviar convite</button>
         <button class="btn btn-danger" id="syncDisable">Desconectar</button>
       </div>
+      <button class="btn btn-ghost btn-block" id="syncPush" style="margin-top:10px">Enviar meus dados agora</button>
     </div>
   </div>
 
@@ -717,7 +774,16 @@
     repeat: '<path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>',
     wallet: '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>',
     trending: '<path d="M22 7 13.5 15.5 8.5 10.5 2 17"/><path d="M16 7h6v6"/>',
-    tag: '<path d="M12.6 2.6A2 2 0 0 0 11.2 2H4a2 2 0 0 0-2 2v7.2a2 2 0 0 0 .6 1.4l8.7 8.7a2.4 2.4 0 0 0 3.4 0l6.6-6.6a2.4 2.4 0 0 0 0-3.4Z"/><circle cx="7" cy="7" r="1.2"/>'
+    tag: '<path d="M12.6 2.6A2 2 0 0 0 11.2 2H4a2 2 0 0 0-2 2v7.2a2 2 0 0 0 .6 1.4l8.7 8.7a2.4 2.4 0 0 0 3.4 0l6.6-6.6a2.4 2.4 0 0 0 0-3.4Z"/><circle cx="7" cy="7" r="1.2"/>',
+    gift: '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/>',
+    coffee: '<path d="M10 2v2"/><path d="M14 2v2"/><path d="M6 2v2"/><path d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1"/>',
+    plane: '<path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>',
+    phone: '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>',
+    shirt: '<path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/>',
+    dumbbell: '<path d="m6.5 6.5 11 11"/><path d="m21 21-1-1"/><path d="m3 3 1 1"/><path d="m18 22 4-4"/><path d="m2 6 4-4"/><path d="m3 10 7-7"/><path d="m14 21 7-7"/>',
+    wrench: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
+    star: '<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/>',
+    paw: '<circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/>'
   };
   function icon(name, cls) {
     return '<svg class="' + (cls || "") + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + (P[name] || P.tag) + "</svg>";
@@ -739,11 +805,21 @@
   ];
   var CAT = {};
   CATEGORIES.forEach(function (c) { CAT[c.id] = c; });
+  function iconNames() { return Object.keys(P); }
+  function activeCats() {
+    var custom = state.categorias.filter(function (c) { return !c.deleted && c.label; });
+    return CATEGORIES.concat(custom);
+  }
+  function rebuildCatIndex() {
+    CAT = {};
+    activeCats().forEach(function (c) { CAT[c.id] = c; });
+  }
 
   /* ---------------- Estado ---------------- */
   var state = {
     transacoes: [],
     dividas: [],
+    categorias: [],
     view: { y: 0, m: 0 },
     query: "",
     editingId: null,
@@ -797,7 +873,7 @@
 
   /* ---------------- Persistência ---------------- */
   function snapshot() {
-    return { v: 2, transacoes: state.transacoes, dividas: state.dividas };
+    return { v: 2, transacoes: state.transacoes, dividas: state.dividas, categorias: state.categorias };
   }
   function save() {
     try { localStorage.setItem(KEY, JSON.stringify(snapshot())); } catch (e) {}
@@ -844,9 +920,25 @@
       };
     }).filter(function (d) { return d.valorTotal > 0 || d.deleted; });
   }
+  function normalizeCats(list) {
+    if (!Array.isArray(list)) return [];
+    return list.filter(function (c) { return c && typeof c === "object"; }).map(function (c) {
+      var criadoEm = Number(c.criadoEm) || Date.now();
+      return {
+        id: c.id ? String(c.id) : uid(),
+        label: typeof c.label === "string" ? c.label.slice(0, 24).trim() : "",
+        icon: iconNames().indexOf(c.icon) > -1 ? c.icon : "tag",
+        color: /^#[0-9a-fA-F]{6}$/.test(c.color) ? c.color : "#8b9099",
+        criadoEm: criadoEm,
+        updatedAt: Number(c.updatedAt) || criadoEm,
+        deleted: !!c.deleted
+      };
+    }).filter(function (c) { return c.label || c.deleted; });
+  }
   function mapOldCategoria(v) {
     if (CAT[v]) return v;
-    for (var i = 0; i < CATEGORIES.length; i++) if (CATEGORIES[i].label === v) return CATEGORIES[i].id;
+    var list = activeCats();
+    for (var i = 0; i < list.length; i++) if (list[i].label === v) return list[i].id;
     return "outros";
   }
   function parseOldDate(v) {
@@ -874,9 +966,13 @@
       if (raw) {
         var parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
+          state.categorias = [];
+          rebuildCatIndex();
           state.transacoes = normalize(parsed);
           state.dividas = [];
         } else if (parsed && typeof parsed === "object") {
+          state.categorias = normalizeCats(parsed.categorias);
+          rebuildCatIndex();
           state.transacoes = normalize(parsed.transacoes);
           state.dividas = normalizeDebts(parsed.dividas);
         }
@@ -884,12 +980,14 @@
       }
       var old = localStorage.getItem(OLD_KEY);
       if (old) {
+        state.categorias = [];
+        rebuildCatIndex();
         state.transacoes = normalize(migrateOld(JSON.parse(old)));
         state.dividas = [];
         save();
         localStorage.removeItem(OLD_KEY);
       }
-    } catch (e) { state.transacoes = []; state.dividas = []; }
+    } catch (e) { state.categorias = []; rebuildCatIndex(); state.transacoes = []; state.dividas = []; }
   }
 
   /* ---------------- Cálculos ---------------- */
@@ -1239,16 +1337,22 @@
     Array.prototype.forEach.call(document.querySelectorAll(".sheet.open"), function (s) { s.classList.remove("open"); });
     document.body.style.overflow = "";
   }
-  backdrop.addEventListener("click", closeSheets);
+  function catSheetOpen() { var s = $("catSheet"); return !!(s && s.classList.contains("open")); }
+  function closeCatSheet() { var s = $("catSheet"); if (s) s.classList.remove("open"); }
+  backdrop.addEventListener("click", function () { if (catSheetOpen()) { closeCatSheet(); return; } closeSheets(); });
   Array.prototype.forEach.call(document.querySelectorAll("[data-close]"), function (b) {
-    b.addEventListener("click", closeSheets);
+    b.addEventListener("click", function () { if (catSheetOpen()) { closeCatSheet(); return; } closeSheets(); });
   });
-  document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeSheets(); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Escape") return;
+    if (catSheetOpen()) { closeCatSheet(); return; }
+    closeSheets();
+  });
 
   /* ---------------- Form ---------------- */
   var catsWrap = $("cats");
-  function buildCatsInto(container, name) {
-    CATEGORIES.forEach(function (c) {
+  function buildCatsInto(container, name, list) {
+    (list || activeCats()).forEach(function (c) {
       var label = document.createElement("label");
       label.className = "cat";
       label.style.setProperty("--c", c.color);
@@ -1262,9 +1366,115 @@
     });
   }
   function buildCats() {
-    buildCatsInto(catsWrap, "categoria");
-    buildCatsInto($("debtCats"), "debtCategoria");
+    var prevCat = selectedCategoria();
+    var prevDebt = selectedRadio("debtCategoria");
+    catsWrap.innerHTML = "";
+    $("debtCats").innerHTML = "";
+    var list = activeCats();
+    buildCatsInto(catsWrap, "categoria", list);
+    buildCatsInto($("debtCats"), "debtCategoria", list);
+    if (prevCat) setCategoria(prevCat);
+    if (prevDebt) setRadio("debtCategoria", prevDebt);
   }
+
+  /* ---------------- Categorias personalizadas ---------------- */
+  var CAT_ICONS = iconNames();
+  var CAT_COLORS = ["#e07a3f", "#d94f68", "#c0578f", "#8a63d2", "#4f7cff", "#3f7fbf", "#0e7490", "#259c94", "#0d8a5f", "#6b7280", "#b8860b", "#8b9099"];
+  var catDraft = { icon: "tag", color: CAT_COLORS[0] };
+
+  function renderIconPick() {
+    var box = $("catIcons");
+    box.innerHTML = "";
+    CAT_ICONS.forEach(function (name) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "icon-opt" + (catDraft.icon === name ? " sel" : "");
+      b.setAttribute("aria-label", name);
+      b.innerHTML = icon(name);
+      b.addEventListener("click", function () { catDraft.icon = name; renderIconPick(); });
+      box.appendChild(b);
+    });
+  }
+  function renderColorPick() {
+    var box = $("catColors");
+    box.innerHTML = "";
+    CAT_COLORS.forEach(function (color) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "color-opt" + (catDraft.color === color ? " sel" : "");
+      b.style.background = color;
+      b.setAttribute("aria-label", color);
+      b.addEventListener("click", function () { catDraft.color = color; renderColorPick(); });
+      box.appendChild(b);
+    });
+  }
+  function findCatByName(name) {
+    var list = activeCats();
+    for (var i = 0; i < list.length; i++) if (list[i].label.toLowerCase() === name.toLowerCase()) return list[i];
+    return null;
+  }
+  function renderCatManage() {
+    var box = $("catManage");
+    box.innerHTML = "";
+    var custom = state.categorias.filter(function (c) { return !c.deleted; });
+    if (!custom.length) return;
+    var title = document.createElement("div");
+    title.className = "cat-manage-title";
+    title.textContent = "Suas categorias";
+    box.appendChild(title);
+    custom.forEach(function (c) {
+      var row = document.createElement("div");
+      row.className = "cat-manage-row";
+      row.innerHTML = '<span class="cm-ic" style="--c:' + c.color + '">' + icon(c.icon) + '</span><span class="cm-name"></span>';
+      row.querySelector(".cm-name").textContent = c.label;
+      var del = document.createElement("button");
+      del.type = "button";
+      del.className = "cm-del";
+      del.setAttribute("aria-label", "Excluir categoria");
+      del.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="m19 6-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6"/></svg>';
+      del.addEventListener("click", function () { deleteCat(c); });
+      row.appendChild(del);
+      box.appendChild(row);
+    });
+  }
+  function openCatForm() {
+    catDraft = { icon: "tag", color: CAT_COLORS[0] };
+    $("catName").value = "";
+    renderIconPick();
+    renderColorPick();
+    renderCatManage();
+    backdrop.classList.add("open");
+    $("catSheet").classList.add("open");
+    document.body.style.overflow = "hidden";
+    setTimeout(function () { $("catName").focus(); }, 300);
+  }
+  function saveNewCat() {
+    var name = $("catName").value.trim();
+    if (!name) { toast("Dê um nome para a categoria"); $("catName").focus(); return; }
+    if (findCatByName(name)) { toast("Já existe uma categoria com esse nome"); return; }
+    var ts = Date.now();
+    var cat = { id: uid(), label: name, icon: catDraft.icon, color: catDraft.color, criadoEm: ts, updatedAt: ts, deleted: false };
+    state.categorias.push(cat);
+    rebuildCatIndex();
+    buildCats();
+    setCategoria(cat.id);
+    save(); render();
+    closeCatSheet();
+    toast("Categoria criada");
+  }
+  function deleteCat(c) {
+    confirmDialog("Excluir categoria", "Os lançamentos que usam \u201c" + c.label + "\u201d passam a aparecer como Outros.").then(function (ok) {
+      if (!ok) return;
+      c.deleted = true; c.updatedAt = Date.now();
+      rebuildCatIndex();
+      buildCats();
+      save(); render(); renderCatManage();
+      toast("Categoria removida");
+    });
+  }
+  $("catAddBtn").addEventListener("click", openCatForm);
+  $("catSaveBtn").addEventListener("click", saveNewCat);
+  $("catName").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); saveNewCat(); } });
   function setRadio(name, value, fallback) {
     var input = document.querySelector('input[name="' + name + '"][value="' + value + '"]');
     if (!input) input = document.querySelector('input[name="' + name + '"][value="' + (fallback || "outros") + '"]');
@@ -1535,13 +1745,14 @@
       try { data = JSON.parse(fromB64(text.trim())); }
       catch (e2) { toast("Código inválido"); return; }
     }
-    var txs, dvs;
-    if (Array.isArray(data)) { txs = data; dvs = []; }
-    else if (data && typeof data === "object") { txs = data.transacoes || []; dvs = data.dividas || []; }
+    var txs, dvs, cvs;
+    if (Array.isArray(data)) { txs = data; dvs = []; cvs = []; }
+    else if (data && typeof data === "object") { txs = data.transacoes || []; dvs = data.dividas || []; cvs = data.categorias || []; }
     else { toast("Formato não reconhecido"); return; }
     var incoming = normalize(txs);
     var incomingDebts = normalizeDebts(dvs);
-    if (!incoming.length && !incomingDebts.length) { toast("Nenhum lançamento encontrado"); return; }
+    var incomingCats = normalizeCats(cvs);
+    if (!incoming.length && !incomingDebts.length && !incomingCats.length) { toast("Nenhum lançamento encontrado"); return; }
     var nTx = incoming.length, nDv = incomingDebts.length;
     confirmDialog(
       "Importar dados",
@@ -1556,12 +1767,17 @@
         var dids = {}; state.dividas.forEach(function (d) { dids[d.id] = true; });
         var addedD = 0;
         incomingDebts.forEach(function (d) { if (!dids[d.id]) { state.dividas.push(d); dids[d.id] = true; addedD++; } });
-        toast((added || addedD) ? (added + addedD) + " item(ns) adicionado(s)" : "Tudo já estava atualizado");
+        var cids = {}; state.categorias.forEach(function (c) { cids[c.id] = true; });
+        var addedC = 0;
+        incomingCats.forEach(function (c) { if (!cids[c.id]) { state.categorias.push(c); cids[c.id] = true; addedC++; } });
+        toast((added || addedD || addedC) ? (added + addedD + addedC) + " item(ns) adicionado(s)" : "Tudo já estava atualizado");
       } else {
         state.transacoes = incoming;
         state.dividas = incomingDebts;
+        state.categorias = incomingCats;
         toast("Dados substituídos");
       }
+      rebuildCatIndex(); buildCats();
       save(); render(); $("importData").value = ""; closeSheets();
     });
   }
@@ -1634,8 +1850,9 @@
     "wss://broker.hivemq.com:8884/mqtt"
   ];
   var sync = {
-    enabled: false, code: "", topic: "", key: null, client: null,
-    status: "off", broker: 0, lastSentHash: null, revealed: false
+    enabled: false, code: "", topic: "", key: null, clients: [],
+    status: "off", lastSentHash: null, revealed: false, finger: "", note: "",
+    recvCount: 0, lastRecv: 0, errCount: 0, seenRaw: null, seenAt: 0
   };
   var publishTimer = null;
 
@@ -1691,6 +1908,29 @@
       .then(function (buf) { return JSON.parse(new TextDecoder().decode(buf)); });
   }
 
+  function payloadToString(p) {
+    if (p == null) return "";
+    if (typeof p === "string") return p;
+    try { return new TextDecoder("utf-8").decode(p); } catch (e) {}
+    try { return String(p); } catch (e) {}
+    return "";
+  }
+  function anyConnected() {
+    for (var i = 0; i < sync.clients.length; i++) {
+      if (sync.clients[i] && sync.clients[i].connected) return true;
+    }
+    return false;
+  }
+  function closeClients() {
+    sync.clients.slice().forEach(function (c) { try { c.end(true); } catch (e) {} });
+    sync.clients = [];
+  }
+  function shortFinger(topic) { return String(topic || "").replace(/^nc\//, "").slice(0, 4).toUpperCase(); }
+  function timeHM(ts) {
+    var d = new Date(ts);
+    return pad(d.getHours()) + ":" + pad(d.getMinutes());
+  }
+
   function stateHash() {
     var a = state.transacoes.map(function (t) {
       return "t" + t.id + ":" + (t.updatedAt || 0) + ":" + (t.deleted ? 1 : 0);
@@ -1698,9 +1938,26 @@
     var b = state.dividas.map(function (d) {
       return "d" + d.id + ":" + (d.updatedAt || 0) + ":" + (d.deleted ? 1 : 0);
     });
-    return a.concat(b).sort().join("|");
+    var c = state.categorias.map(function (x) {
+      return "c" + x.id + ":" + (x.updatedAt || 0) + ":" + (x.deleted ? 1 : 0);
+    });
+    return a.concat(b, c).sort().join("|");
   }
   function mergeStates(msg) {
+    var cvs = (!Array.isArray(msg) && msg && msg.c) || [];
+    var cmap = {};
+    state.categorias.forEach(function (c) { cmap[c.id] = c; });
+    var cchanged = false;
+    var incomingCats = normalizeCats(cvs);
+    incomingCats.forEach(function (c) {
+      var cur = cmap[c.id];
+      if (!cur || (c.updatedAt || 0) > (cur.updatedAt || 0)) { cmap[c.id] = c; cchanged = true; }
+    });
+    if (cchanged) {
+      state.categorias = Object.keys(cmap).map(function (k) { return cmap[k]; });
+      rebuildCatIndex();
+    }
+
     var txs = Array.isArray(msg) ? msg : ((msg && msg.t) || []);
     var dvs = (!Array.isArray(msg) && msg && msg.d) || [];
     var map = {};
@@ -1721,18 +1978,33 @@
     });
     if (dchanged) state.dividas = Object.keys(dmap).map(function (k) { return dmap[k]; });
 
-    return changed || dchanged;
+    return { changed: changed || dchanged || cchanged, catsChanged: cchanged };
   }
 
+  function statusLabel(kind) {
+    return { online: "Sincronizado", connecting: "Conectando...", waiting: "Reconectando...", offline: "Offline", off: "Desligado" }[kind] || kind;
+  }
+  function updateSyncStatusText() {
+    var txt = $("syncStatusText");
+    if (!txt) return;
+    if (!sync.enabled) { txt.textContent = ""; return; }
+    var s = sync.note || statusLabel(sync.status);
+    if (!sync.note && (sync.status === "online" || sync.status === "waiting")) {
+      s += sync.lastRecv
+        ? " · recebido " + timeHM(sync.lastRecv) + (sync.recvCount > 1 ? " (" + sync.recvCount + "x)" : "")
+        : " · nenhuma atualização recebida ainda";
+    }
+    if (sync.errCount) s += " · " + sync.errCount + " mensagem(ns) com erro";
+    txt.textContent = s;
+  }
   function setStatus(kind, text) {
     sync.status = kind;
-    var labels = { online: "Sincronizado", connecting: "Conectando...", waiting: "Reconectando...", offline: "Offline", off: "Desligado" };
+    sync.note = text || "";
     var pill = $("syncPill");
     if (pill) { pill.hidden = !sync.enabled; pill.className = "sync-pill " + kind; }
-    var pt = $("syncPillText"); if (pt) pt.textContent = labels[kind] || kind;
+    var pt = $("syncPillText"); if (pt) pt.textContent = statusLabel(kind);
     var dot = $("syncDot"); if (dot) dot.className = "dot " + kind;
     var pdot = $("syncDotPanel"); if (pdot) pdot.className = "dot " + kind;
-    var txt = $("syncStatusText"); if (txt) txt.textContent = text || labels[kind] || "";
     updateSyncUI();
   }
   function updateSyncUI() {
@@ -1740,6 +2012,9 @@
     if ($("syncOn")) $("syncOn").hidden = !sync.enabled;
     var val = $("syncCodeValue");
     if (val) val.textContent = sync.enabled ? (sync.revealed ? formatCode(sync.code) : "\u2022\u2022\u2022\u2022-\u2022\u2022\u2022\u2022-\u2022\u2022\u2022\u2022") : "";
+    var fp = $("syncFinger");
+    if (fp) fp.textContent = sync.enabled && sync.finger ? sync.finger : "----";
+    updateSyncStatusText();
   }
 
   function loadMqttLib() {
@@ -1755,57 +2030,56 @@
 
   function connectSync() {
     if (!sync.enabled || !sync.topic || !sync.key) return;
-    if (sync.client) { try { sync.client.end(true); } catch (e) {} sync.client = null; }
+    closeClients();
     setStatus("connecting");
     loadMqttLib().then(function (mqtt) {
-      var url = BROKERS[sync.broker % BROKERS.length];
-      var client;
-      try {
-        client = mqtt.connect(url, {
-          clientId: "nc_" + genCode().slice(0, 8).toLowerCase(),
-          clean: true, connectTimeout: 9000, reconnectPeriod: 4000, keepalive: 30
-        });
-      } catch (e) { retryBroker(); return; }
-      var settled = false;
-      var timer = setTimeout(function () {
-        if (settled) return; settled = true;
-        try { client.end(true); } catch (e) {}
-        retryBroker();
-      }, 9500);
-      client.on("connect", function () {
-        settled = true; clearTimeout(timer);
-        sync.client = client;
-        client.subscribe(sync.topic, { qos: 0 }, function () {
-          sync.lastSentHash = null;
-          schedulePublish();
-        });
-        setStatus("online");
-      });
-      client.on("message", function (topic, payload) { onSyncMessage(payload); });
-      client.on("close", function () { if (sync.client === client) setStatus("waiting"); });
-      client.on("error", function () {
-        if (settled) return; settled = true; clearTimeout(timer);
-        try { client.end(true); } catch (e) {}
-        retryBroker();
-      });
+      BROKERS.forEach(function (url) { connectBroker(mqtt, url); });
     }).catch(function () { setStatus("offline", "Sem internet para sincronizar"); });
   }
-  function retryBroker() {
-    sync.broker++;
-    setStatus("connecting");
-    setTimeout(function () { if (sync.enabled) connectSync(); }, 900);
+  function connectBroker(mqtt, url) {
+    if (!sync.enabled) return;
+    var client;
+    try {
+      client = mqtt.connect(url, {
+        clientId: "nc_" + genCode().slice(0, 8).toLowerCase(),
+        clean: true, connectTimeout: 9000, reconnectPeriod: 4000, keepalive: 30
+      });
+    } catch (e) { return; }
+    sync.clients.push(client);
+    client.on("connect", function () {
+      client.subscribe(sync.topic, { qos: 1 }, function () {
+        sync.lastSentHash = null;
+        schedulePublish();
+      });
+      if (sync.enabled) setStatus("online");
+    });
+    client.on("message", function (topic, payload) { onSyncMessage(payload); });
+    client.on("close", function () {
+      if (sync.enabled) setStatus(anyConnected() ? "online" : "waiting");
+    });
+    client.on("error", function () {
+      if (sync.enabled) setStatus(anyConnected() ? "online" : "waiting");
+    });
   }
 
   function onSyncMessage(payload) {
-    if (!sync.key || !payload) return;
-    var raw = payload.toString();
+    if (!sync.key || payload == null) return;
+    var raw = payloadToString(payload);
     if (!raw) return;
+    var now = Date.now();
+    if (sync.seenRaw === raw && now - sync.seenAt < 3000) return;
+    sync.seenRaw = raw; sync.seenAt = now;
     decryptJSON(raw).then(function (msg) {
       if (!msg) return;
-      var changed = mergeStates(msg);
-      if (pruneTombstones()) changed = true;
-      if (changed) { save(); render(); }
-    }).catch(function () {});
+      sync.recvCount++; sync.lastRecv = Date.now();
+      var res = mergeStates(msg);
+      if (pruneTombstones()) res.changed = true;
+      if (res.changed) {
+        if (res.catsChanged) { rebuildCatIndex(); buildCats(); }
+        save(); render();
+      }
+      updateSyncStatusText();
+    }).catch(function () { sync.errCount++; updateSyncStatusText(); });
   }
 
   function schedulePublish() {
@@ -1813,12 +2087,13 @@
     publishTimer = setTimeout(doPublish, 300);
   }
   function doPublish() {
-    if (!sync.enabled || !sync.key || !sync.client || !sync.client.connected) return;
+    if (!sync.enabled || !sync.key) return;
+    var targets = sync.clients.filter(function (c) { return c && c.connected; });
+    if (!targets.length) return;
     var h = stateHash();
     if (h === sync.lastSentHash) return;
-    encryptJSON({ v: 2, t: state.transacoes, d: state.dividas, at: Date.now() }).then(function (payload) {
-      if (!sync.client || !sync.client.connected) return;
-      sync.client.publish(sync.topic, payload, { qos: 0, retain: true });
+    encryptJSON({ v: 2, t: state.transacoes, d: state.dividas, c: state.categorias, at: Date.now() }).then(function (payload) {
+      targets.forEach(function (c) { try { c.publish(sync.topic, payload, { qos: 1, retain: true }); } catch (e) {} });
       sync.lastSentHash = h;
     }).catch(function () {});
   }
@@ -1829,19 +2104,20 @@
     if (code.length < 8) { toast("Código muito curto"); return; }
     sync.enabled = true;
     sync.code = code;
-    sync.broker = 0;
     sync.lastSentHash = null;
+    sync.recvCount = 0; sync.lastRecv = 0; sync.errCount = 0; sync.finger = ""; sync.note = "";
     try { localStorage.setItem(SYNC_KEY, code); } catch (e) {}
     updateSyncUI();
     Promise.all([deriveTopic(code), deriveKey(code)]).then(function (r) {
-      sync.topic = r[0]; sync.key = r[1];
+      sync.topic = r[0]; sync.key = r[1]; sync.finger = shortFinger(r[0]);
       updateSyncUI();
       connectSync();
     });
   }
   function stopSync() {
     sync.enabled = false; sync.code = ""; sync.topic = ""; sync.key = null; sync.lastSentHash = null;
-    if (sync.client) { try { sync.client.end(true); } catch (e) {} sync.client = null; }
+    sync.recvCount = 0; sync.lastRecv = 0; sync.errCount = 0; sync.finger = ""; sync.note = "";
+    closeClients();
     try { localStorage.removeItem(SYNC_KEY); } catch (e) {}
     setStatus("off");
     toast("Sincronização desligada");
@@ -1887,6 +2163,12 @@
     if (navigator.share) { navigator.share({ title: "Nosso Caixa", text: msg }).catch(function () {}); }
     else { copyText(code, function () { toast("Código copiado"); }); }
   });
+  $("syncPush").addEventListener("click", function () {
+    if (!anyConnected()) { toast("Sem conexão — verifique a internet"); return; }
+    sync.lastSentHash = null;
+    doPublish();
+    toast("Enviando seus dados agora");
+  });
   $("syncDisable").addEventListener("click", function () {
     confirmDialog("Desligar sincronização", "O app continua funcionando aqui, mas para de atualizar em tempo real.").then(function (ok) {
       if (ok) stopSync();
@@ -1894,10 +2176,7 @@
   });
 
   document.addEventListener("visibilitychange", function () {
-    if (document.visibilityState === "visible" && sync.enabled && (!sync.client || !sync.client.connected)) {
-      sync.broker = 0;
-      connectSync();
-    }
+    if (document.visibilityState === "visible" && sync.enabled && !anyConnected()) connectSync();
   });
 
   /* ---------------- Tema ---------------- */
@@ -1971,8 +2250,8 @@
 
   /* ---------------- Init ---------------- */
   applyTheme(document.documentElement.getAttribute("data-theme") || "light");
-  buildCats();
   load();
+  buildCats();
   render();
   initSync();
   refreshInstallUI();
