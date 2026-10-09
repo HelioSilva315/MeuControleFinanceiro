@@ -142,8 +142,8 @@
   .panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
   .panel-head h2{font-size:13.5px;font-weight:650;letter-spacing:-.005em}
   .panel-head .hint{font-size:11.5px;color:var(--faint)}
-  .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;background:var(--surface-2);padding:5px;border-radius:14px;border:1px solid var(--line);margin-bottom:14px}
-  .tabs button{padding:10px;border-radius:10px;font-size:13.5px;font-weight:600;color:var(--muted);transition:.18s}
+  .tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;background:var(--surface-2);padding:5px;border-radius:14px;border:1px solid var(--line);margin-bottom:14px}
+  .tabs button{padding:10px 4px;border-radius:10px;font-size:12.5px;font-weight:600;color:var(--muted);transition:.18s}
   .tabs button.active{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(16,24,40,.12)}
   .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .stat{background:var(--surface-2);border:1px solid var(--line);border-radius:14px;padding:12px 14px;min-width:0}
@@ -196,6 +196,9 @@
   .debt-actions .btn{flex:1;padding:10px}
   .debt-done-badge{display:flex;align-items:center;gap:7px;color:var(--pos);font-weight:650;font-size:13px;margin-top:13px}
   .debt-done-badge svg{width:16px;height:16px}
+  .debt.overdue .debt-rest b{color:var(--neg)}
+  .debt-due{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:650;color:var(--neg);text-transform:uppercase;letter-spacing:.05em}
+  .debt-receiving{font-size:12px;color:var(--muted);margin-top:2px}
 
   /* ---------- Transactions ---------- */
   .list-head{display:flex;align-items:center;justify-content:space-between;padding:0 2px;margin-bottom:10px}
@@ -439,6 +442,7 @@
     <button id="tabResumo" class="active" type="button">Resumo</button>
     <button id="tabExtrato" type="button">Extrato</button>
     <button id="tabDividas" type="button">Dívidas</button>
+    <button id="tabReceber" type="button">A Receber</button>
   </div>
 
   <section id="viewResumo">
@@ -526,9 +530,27 @@
     </div>
     <div id="dividasList"></div>
   </section>
+
+  <section id="viewReceber" hidden>
+    <div class="debt-toolbar">
+      <div>
+        <div class="debt-total-label">A receber</div>
+        <div class="debt-total num" id="receberTotal">R$ 0,00</div>
+      </div>
+      <button class="btn btn-primary" id="newRecvBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+        Novo recebível
+      </button>
+    </div>
+    <div class="list-head">
+      <h2>Valores a receber</h2>
+      <span class="hint" id="receberCount">—</span>
+    </div>
+    <div id="receberList"></div>
+  </section>
 </div>
 
-<footer class="verbar">Nosso Caixa · versão <b id="verMark">v7</b></footer>
+<footer class="verbar">Nosso Caixa · versão <b id="verMark">v8</b></footer>
 
 <button class="fab" id="fab">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
@@ -655,6 +677,55 @@
 
     <div class="row-actions" id="debtActions">
       <button type="submit" class="btn btn-primary btn-block" id="debtSaveBtn">Salvar dívida</button>
+    </div>
+  </form>
+</div>
+
+<!-- Receivable sheet -->
+<div class="sheet" id="recvSheet" role="dialog" aria-modal="true" aria-labelledby="recvTitle">
+  <div class="grip"></div>
+  <div class="sheet-head">
+    <h2 id="recvTitle">Novo recebível</h2>
+    <button class="close" data-close aria-label="Fechar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    </button>
+  </div>
+  <form id="recvForm">
+    <div class="field">
+      <label for="recvDesc">Descrição</label>
+      <input class="input" id="recvDesc" maxlength="60" autocomplete="off" placeholder="Ex.: Empréstimo para o irmão, venda da bicicleta">
+    </div>
+
+    <div class="field">
+      <label for="recvValor">Valor total</label>
+      <div class="value-field">
+        <span class="cur">R$</span>
+        <input id="recvValor" inputmode="decimal" autocomplete="off" placeholder="0,00" required>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="recvQuem">Quem deve</label>
+      <input class="input" id="recvQuem" maxlength="40" autocomplete="off" placeholder="Ex.: João, Loja X (opcional)">
+    </div>
+
+    <div class="field">
+      <label for="recvData">Data prevista</label>
+      <input class="input num" type="date" id="recvData">
+    </div>
+
+    <div class="field">
+      <label for="recvParcelas">Nº de parcelas</label>
+      <input class="input num" id="recvParcelas" inputmode="numeric" autocomplete="off" placeholder="Ex.: 1" value="1">
+    </div>
+
+    <div class="field">
+      <label>Categoria</label>
+      <div class="cats" id="recvCats"></div>
+    </div>
+
+    <div class="row-actions" id="recvActions">
+      <button type="submit" class="btn btn-primary btn-block" id="recvSaveBtn">Salvar recebível</button>
     </div>
   </form>
 </div>
@@ -825,12 +896,15 @@
   var state = {
     transacoes: [],
     dividas: [],
+    recebiveis: [],
     categorias: [],
     view: { y: 0, m: 0 },
     query: "",
     editingId: null,
     editingDividaId: null,
-    formDividaId: null
+    formDividaId: null,
+    editingRecvId: null,
+    formRecebivelId: null
   };
   var now = new Date();
   state.view.y = now.getFullYear();
@@ -859,6 +933,11 @@
     if (iso === yISO) return "Ontem";
     return capitalizar(d.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "short" }));
   }
+  function fmtDateShort(iso) {
+    var p = String(iso).split("-");
+    if (p.length !== 3) return iso;
+    return p[2] + "/" + p[1] + "/" + p[0].slice(2);
+  }
   function parseValor(raw) {
     var s = String(raw || "").replace(/[^\d.,-]/g, "").trim();
     if (!s) return NaN;
@@ -879,7 +958,7 @@
 
   /* ---------------- Persistência ---------------- */
   function snapshot() {
-    return { v: 2, transacoes: state.transacoes, dividas: state.dividas, categorias: state.categorias };
+    return { v: 3, transacoes: state.transacoes, dividas: state.dividas, categorias: state.categorias, recebiveis: state.recebiveis };
   }
   function save() {
     try { localStorage.setItem(KEY, JSON.stringify(snapshot())); } catch (e) {}
@@ -887,10 +966,11 @@
   }
   function pruneTombstones() {
     var limit = Date.now() - 120 * 24 * 60 * 60 * 1000;
-    var before = state.transacoes.length + state.dividas.length;
+    var before = state.transacoes.length + state.dividas.length + state.recebiveis.length;
     state.transacoes = state.transacoes.filter(function (t) { return !t.deleted || (t.updatedAt || 0) > limit; });
     state.dividas = state.dividas.filter(function (d) { return !d.deleted || (d.updatedAt || 0) > limit; });
-    return (state.transacoes.length + state.dividas.length) !== before;
+    state.recebiveis = state.recebiveis.filter(function (r) { return !r.deleted || (r.updatedAt || 0) > limit; });
+    return (state.transacoes.length + state.dividas.length + state.recebiveis.length) !== before;
   }
   function normalize(list) {
     if (!Array.isArray(list)) return [];
@@ -904,6 +984,7 @@
         categoria: CAT[t.categoria] ? t.categoria : "outros",
         data: /^\d{4}-\d{2}-\d{2}$/.test(t.data) ? t.data : todayISO(),
         dividaId: t.dividaId ? String(t.dividaId) : null,
+        recebivelId: t.recebivelId ? String(t.recebivelId) : null,
         criadoEm: criadoEm,
         updatedAt: Number(t.updatedAt) || criadoEm,
         deleted: !!t.deleted
@@ -925,6 +1006,24 @@
         deleted: !!d.deleted
       };
     }).filter(function (d) { return d.valorTotal > 0 || d.deleted; });
+  }
+  function normalizeRecebiveis(list) {
+    if (!Array.isArray(list)) return [];
+    return list.filter(function (r) { return r && typeof r === "object"; }).map(function (r) {
+      var criadoEm = Number(r.criadoEm) || Date.now();
+      return {
+        id: r.id ? String(r.id) : uid(),
+        descricao: typeof r.descricao === "string" ? r.descricao.slice(0, 60) : "",
+        valorTotal: Math.abs(Number(r.valorTotal)) || 0,
+        quemDeve: typeof r.quemDeve === "string" ? r.quemDeve.slice(0, 40) : "",
+        dataPrevista: /^\d{4}-\d{2}-\d{2}$/.test(r.dataPrevista) ? r.dataPrevista : "",
+        parcelas: Math.max(1, Math.round(Number(r.parcelas) || 1)),
+        categoria: CAT[r.categoria] ? r.categoria : "outros",
+        criadoEm: criadoEm,
+        updatedAt: Number(r.updatedAt) || criadoEm,
+        deleted: !!r.deleted
+      };
+    }).filter(function (r) { return r.valorTotal > 0 || r.deleted; });
   }
   function normalizeCats(list) {
     if (!Array.isArray(list)) return [];
@@ -976,11 +1075,13 @@
           rebuildCatIndex();
           state.transacoes = normalize(parsed);
           state.dividas = [];
+          state.recebiveis = [];
         } else if (parsed && typeof parsed === "object") {
           state.categorias = normalizeCats(parsed.categorias);
           rebuildCatIndex();
           state.transacoes = normalize(parsed.transacoes);
           state.dividas = normalizeDebts(parsed.dividas);
+          state.recebiveis = normalizeRecebiveis(parsed.recebiveis);
         }
         return;
       }
@@ -990,10 +1091,11 @@
         rebuildCatIndex();
         state.transacoes = normalize(migrateOld(JSON.parse(old)));
         state.dividas = [];
+        state.recebiveis = [];
         save();
         localStorage.removeItem(OLD_KEY);
       }
-    } catch (e) { state.categorias = []; rebuildCatIndex(); state.transacoes = []; state.dividas = []; }
+    } catch (e) { state.categorias = []; rebuildCatIndex(); state.transacoes = []; state.dividas = []; state.recebiveis = []; }
   }
 
   /* ---------------- Cálculos ---------------- */
@@ -1030,6 +1132,32 @@
     var rest = debtRemaining(d);
     if (d.parcelas > 1) return Math.min(rest, d.valorTotal / d.parcelas);
     return rest;
+  }
+
+  /* ---------------- A Receber ---------------- */
+  function recvById(id) {
+    for (var i = 0; i < state.recebiveis.length; i++) if (state.recebiveis[i].id === id) return state.recebiveis[i];
+    return null;
+  }
+  function recvReceived(id) {
+    return state.transacoes.reduce(function (s, t) {
+      if (t.deleted || t.recebivelId !== id || t.tipo !== "entrada") return s;
+      return s + t.valor;
+    }, 0);
+  }
+  function recvRemaining(r) { return Math.max(0, r.valorTotal - recvReceived(r.id)); }
+  function activeRecv() {
+    return state.recebiveis.filter(function (r) { return !r.deleted; })
+      .sort(function (a, b) { return (b.criadoEm || 0) - (a.criadoEm || 0); });
+  }
+  function suggestRecvValor(r) {
+    var rest = recvRemaining(r);
+    if (r.parcelas > 1) return Math.min(rest, r.valorTotal / r.parcelas);
+    return rest;
+  }
+  function recvOverdue(r) {
+    if (!r.dataPrevista) return false;
+    return recvRemaining(r) > 0 && r.dataPrevista < todayISO();
   }
 
   /* ---------------- Render ---------------- */
@@ -1305,8 +1433,9 @@
             '<button type="button" class="tx-act danger" data-del aria-label="Excluir lançamento"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="m19 6-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6"/></svg></button>' +
           '</span>';
         var dv = t.dividaId ? debtById(t.dividaId) : null;
+        var rv = t.recebivelId ? recvById(t.recebivelId) : null;
         row.querySelector(".tx-title").textContent = t.descricao || c.label;
-        row.querySelector(".tx-meta").textContent = (dv ? "Parcela \u00b7 " : "") + c.label;
+        row.querySelector(".tx-meta").textContent = (dv ? "Parcela \u00b7 " : "") + (rv ? "Recebimento \u00b7 " : "") + c.label;
         var amt = row.querySelector(".tx-amt");
         amt.classList.add(t.tipo === "entrada" ? "in" : "out");
         amt.textContent = (t.tipo === "entrada" ? "+ " : "\u2212 ") + fmtBRL(t.valor);
@@ -1321,6 +1450,78 @@
     });
   }
 
+  function renderReceber() {
+    var wrap = $("receberList");
+    var list = activeRecv();
+    var totalRest = list.reduce(function (s, r) { return s + recvRemaining(r); }, 0);
+    $("receberTotal").textContent = fmtBRL(totalRest);
+    $("receberCount").textContent = list.length + (list.length === 1 ? " cadastrado" : " cadastrados");
+    wrap.innerHTML = "";
+
+    if (!list.length) {
+      var empty = document.createElement("div");
+      empty.className = "empty";
+      empty.innerHTML =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="M17 6.5A5 5 0 0 0 12 4c-2.8 0-5 1.6-5 3.5S9.2 11 12 11s5 1.6 5 3.5-2.2 3.5-5 3.5a5 5 0 0 1-5-2.5"/></svg>' +
+        '<p>Nenhum valor a receber. Cadastre para acompanhar o que ainda têm para receber.</p>';
+      wrap.appendChild(empty);
+      return;
+    }
+
+    list.forEach(function (r) {
+      var recebido = recvReceived(r.id);
+      var rest = Math.max(0, r.valorTotal - recebido);
+      var done = rest <= 0;
+      var pct = r.valorTotal > 0 ? Math.min(100, (recebido / r.valorTotal) * 100) : 100;
+      var c = CAT[r.categoria] || CAT.outros;
+      var overdue = recvOverdue(r);
+
+      var card = document.createElement("div");
+      card.className = "debt" + (done ? " done" : "") + (overdue ? " overdue" : "");
+      card.innerHTML =
+        '<div class="debt-top">' +
+          '<div><div class="debt-name"></div><div class="debt-sub"></div></div>' +
+          '<div class="debt-rest"><b class="num"></b><small></small></div>' +
+        '</div>' +
+        '<div class="debt-track"><div class="debt-fill"></div></div>' +
+        '<div class="debt-foot"><span class="debt-pago num"></span><span class="debt-pct num"></span></div>' +
+        '<div class="debt-actions"></div>';
+      card.querySelector(".debt-name").textContent = r.descricao || c.label;
+      var subParts = [];
+      if (r.quemDeve) subParts.push(r.quemDeve);
+      subParts.push(c.label);
+      if (r.dataPrevista) subParts.push(fmtDateShort(r.dataPrevista));
+      card.querySelector(".debt-sub").textContent = subParts.join(" \u00b7 ");
+      card.querySelector(".debt-rest b").textContent = fmtBRL(rest);
+      card.querySelector(".debt-rest small").textContent = done ? "recebido" : (overdue ? "atrasado" : "a receber");
+      card.querySelector(".debt-pago").textContent = "Recebido " + fmtBRL(recebido) + " de " + fmtBRL(r.valorTotal);
+      card.querySelector(".debt-pct").textContent = Math.round(pct) + "%";
+      var fill = card.querySelector(".debt-fill");
+      requestAnimationFrame(function () { fill.style.width = pct + "%"; });
+
+      var actions = card.querySelector(".debt-actions");
+      if (done) {
+        var badge = document.createElement("div");
+        badge.className = "debt-done-badge";
+        badge.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Totalmente recebido';
+        card.insertBefore(badge, actions);
+      } else {
+        var recvBtn = document.createElement("button");
+        recvBtn.className = "btn btn-primary";
+        recvBtn.textContent = "Receber";
+        recvBtn.addEventListener("click", function () { receiveRecv(r); });
+        actions.appendChild(recvBtn);
+      }
+      var editBtn = document.createElement("button");
+      editBtn.className = "btn btn-ghost";
+      editBtn.textContent = "Editar";
+      editBtn.addEventListener("click", function () { openRecvForm(r); });
+      actions.appendChild(editBtn);
+
+      wrap.appendChild(card);
+    });
+  }
+
   function render() {
     var md = monthData(state.view.y, state.view.m);
     renderMonth();
@@ -1328,6 +1529,7 @@
     renderDashboard(md);
     renderList(md);
     renderDividas();
+    renderReceber();
   }
 
   /* ---------------- Sheets ---------------- */
@@ -1374,13 +1576,17 @@
   function buildCats() {
     var prevCat = selectedCategoria();
     var prevDebt = selectedRadio("debtCategoria");
+    var prevRecv = selectedRadio("recvCategoria");
     catsWrap.innerHTML = "";
     $("debtCats").innerHTML = "";
+    $("recvCats").innerHTML = "";
     var list = activeCats();
     buildCatsInto(catsWrap, "categoria", list);
     buildCatsInto($("debtCats"), "debtCategoria", list);
+    buildCatsInto($("recvCats"), "recvCategoria", list);
     if (prevCat) setCategoria(prevCat);
     if (prevDebt) setRadio("debtCategoria", prevDebt);
+    if (prevRecv) setRadio("recvCategoria", prevRecv);
   }
 
   /* ---------------- Categorias personalizadas ---------------- */
@@ -1503,6 +1709,7 @@
     if (tx) {
       state.editingId = tx.id;
       state.formDividaId = tx.dividaId || null;
+      state.formRecebivelId = tx.recebivelId || null;
       $("formTitle").textContent = "Editar lançamento";
       $("saveBtn").textContent = "Salvar alterações";
       setTipo(tx.tipo);
@@ -1525,6 +1732,7 @@
     } else {
       state.editingId = null;
       state.formDividaId = null;
+      state.formRecebivelId = null;
       $("formTitle").textContent = "Novo lançamento";
       $("saveBtn").textContent = "Salvar lançamento";
       setTipo("saida");
@@ -1561,19 +1769,20 @@
     var categoria = selectedCategoria();
     var data = $("dataInput").value || todayISO();
     var dividaId = state.formDividaId || null;
+    var recebivelId = state.formRecebivelId || null;
 
     if (state.editingId) {
       var tx = state.transacoes.filter(function (t) { return t.id === state.editingId; })[0];
-      if (tx) { tx.valor = valor; tx.tipo = tipo; tx.descricao = descricao; tx.categoria = categoria; tx.data = data; tx.dividaId = dividaId; tx.updatedAt = Date.now(); }
+      if (tx) { tx.valor = valor; tx.tipo = tipo; tx.descricao = descricao; tx.categoria = categoria; tx.data = data; tx.dividaId = dividaId; tx.recebivelId = recebivelId; tx.updatedAt = Date.now(); }
       toast("Lançamento atualizado");
     } else {
       var ts = Date.now();
       state.transacoes.unshift({
         id: uid(), descricao: descricao, valor: valor, tipo: tipo,
-        categoria: categoria, data: data, dividaId: dividaId,
+        categoria: categoria, data: data, dividaId: dividaId, recebivelId: recebivelId,
         criadoEm: ts, updatedAt: ts, deleted: false
       });
-      toast(dividaId ? "Parcela registrada" : "Lançamento salvo");
+      toast(recebivelId ? "Recebimento registrado" : (dividaId ? "Parcela registrada" : "Lançamento salvo"));
     }
     save(); render(); closeSheets();
   });
@@ -1665,6 +1874,99 @@
 
   $("newDebtBtn").addEventListener("click", function () { openDebtForm(null); });
 
+  /* ---------------- A Receber: telas ---------------- */
+  function receiveRecv(r) {
+    var rest = recvRemaining(r);
+    if (rest <= 0) { toast("Já totalmente recebido"); return; }
+    openForm(null);
+    state.formRecebivelId = r.id;
+    $("formTitle").textContent = "Receber valor";
+    $("saveBtn").textContent = "Registrar entrada";
+    setTipo("entrada");
+    setCategoria(r.categoria);
+    $("valor").value = suggestRecvValor(r).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    $("descricao").value = r.descricao || "";
+    var del = $("deleteBtn"); if (del) del.remove();
+  }
+
+  function openRecvForm(recv) {
+    var form = $("recvForm");
+    form.reset();
+    var actions = $("recvActions");
+    if (recv) {
+      state.editingRecvId = recv.id;
+      $("recvTitle").textContent = "Editar recebível";
+      $("recvSaveBtn").textContent = "Salvar alterações";
+      $("recvDesc").value = recv.descricao || "";
+      $("recvValor").value = recv.valorTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 });
+      $("recvQuem").value = recv.quemDeve || "";
+      $("recvData").value = recv.dataPrevista || "";
+      $("recvParcelas").value = recv.parcelas || 1;
+      setRadio("recvCategoria", recv.categoria);
+      actions.className = "row-actions two";
+      if (!$("recvDeleteBtn")) {
+        var del = document.createElement("button");
+        del.type = "button";
+        del.id = "recvDeleteBtn";
+        del.className = "btn btn-danger";
+        del.setAttribute("aria-label", "Excluir recebível");
+        del.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="m19 6-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6"/></svg>';
+        del.addEventListener("click", onDeleteRecv);
+        actions.appendChild(del);
+      }
+    } else {
+      state.editingRecvId = null;
+      $("recvTitle").textContent = "Novo recebível";
+      $("recvSaveBtn").textContent = "Salvar recebível";
+      $("recvParcelas").value = "1";
+      setRadio("recvCategoria", "outros");
+      var d = $("recvDeleteBtn"); if (d) d.remove();
+      actions.className = "row-actions";
+    }
+    openSheet("recvSheet");
+    setTimeout(function () { $("recvValor").focus(); }, 320);
+  }
+
+  function onDeleteRecv() {
+    var id = state.editingRecvId;
+    if (!id) return;
+    confirmDialog("Excluir recebível", "O valor sai da lista. As entradas já recebidas continuam no extrato.").then(function (ok) {
+      if (!ok) return;
+      var r = recvById(id);
+      if (r) { r.deleted = true; r.updatedAt = Date.now(); }
+      pruneTombstones();
+      save(); render(); closeSheets(); toast("Recebível excluído");
+    });
+  }
+
+  $("recvForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var valor = parseValor($("recvValor").value);
+    if (!isFinite(valor) || valor <= 0) { toast("Informe o valor total"); $("recvValor").focus(); return; }
+    var descricao = $("recvDesc").value.trim();
+    if (!descricao) { toast("Informe uma descrição"); $("recvDesc").focus(); return; }
+    var quemDeve = $("recvQuem").value.trim();
+    var dataPrevista = /^\d{4}-\d{2}-\d{2}$/.test($("recvData").value) ? $("recvData").value : "";
+    var parcelas = Math.max(1, Math.round(parseValor($("recvParcelas").value) || 1));
+    var categoria = selectedRadio("recvCategoria");
+
+    if (state.editingRecvId) {
+      var r = recvById(state.editingRecvId);
+      if (r) { r.valorTotal = valor; r.descricao = descricao; r.quemDeve = quemDeve; r.dataPrevista = dataPrevista; r.parcelas = parcelas; r.categoria = categoria; r.updatedAt = Date.now(); }
+      toast("Recebível atualizado");
+    } else {
+      var ts = Date.now();
+      state.recebiveis.unshift({
+        id: uid(), descricao: descricao, valorTotal: valor, quemDeve: quemDeve, dataPrevista: dataPrevista,
+        parcelas: parcelas, categoria: categoria, criadoEm: ts, updatedAt: ts, deleted: false
+      });
+      toast("Recebível criado");
+    }
+    save(); render(); closeSheets();
+  });
+
+  $("newRecvBtn").addEventListener("click", function () { openRecvForm(null); });
+
   /* ---------------- Navegação de mês ---------------- */
   $("prevMonth").addEventListener("click", function () {
     state.view.m--; if (state.view.m < 0) { state.view.m = 11; state.view.y--; } render();
@@ -1751,14 +2053,15 @@
       try { data = JSON.parse(fromB64(text.trim())); }
       catch (e2) { toast("Código inválido"); return; }
     }
-    var txs, dvs, cvs;
-    if (Array.isArray(data)) { txs = data; dvs = []; cvs = []; }
-    else if (data && typeof data === "object") { txs = data.transacoes || []; dvs = data.dividas || []; cvs = data.categorias || []; }
+    var txs, dvs, cvs, rvs;
+    if (Array.isArray(data)) { txs = data; dvs = []; cvs = []; rvs = []; }
+    else if (data && typeof data === "object") { txs = data.transacoes || []; dvs = data.dividas || []; cvs = data.categorias || []; rvs = data.recebiveis || []; }
     else { toast("Formato não reconhecido"); return; }
     var incoming = normalize(txs);
     var incomingDebts = normalizeDebts(dvs);
     var incomingCats = normalizeCats(cvs);
-    if (!incoming.length && !incomingDebts.length && !incomingCats.length) { toast("Nenhum lançamento encontrado"); return; }
+    var incomingRecv = normalizeRecebiveis(rvs);
+    if (!incoming.length && !incomingDebts.length && !incomingCats.length && !incomingRecv.length) { toast("Nenhum lançamento encontrado"); return; }
     var nTx = incoming.length, nDv = incomingDebts.length;
     confirmDialog(
       "Importar dados",
@@ -1776,11 +2079,15 @@
         var cids = {}; state.categorias.forEach(function (c) { cids[c.id] = true; });
         var addedC = 0;
         incomingCats.forEach(function (c) { if (!cids[c.id]) { state.categorias.push(c); cids[c.id] = true; addedC++; } });
-        toast((added || addedD || addedC) ? (added + addedD + addedC) + " item(ns) adicionado(s)" : "Tudo já estava atualizado");
+        var rids = {}; state.recebiveis.forEach(function (r) { rids[r.id] = true; });
+        var addedR = 0;
+        incomingRecv.forEach(function (r) { if (!rids[r.id]) { state.recebiveis.push(r); rids[r.id] = true; addedR++; } });
+        toast((added || addedD || addedC || addedR) ? (added + addedD + addedC + addedR) + " item(ns) adicionado(s)" : "Tudo já estava atualizado");
       } else {
         state.transacoes = incoming;
         state.dividas = incomingDebts;
         state.categorias = incomingCats;
+        state.recebiveis = incomingRecv;
         toast("Dados substituídos");
       }
       rebuildCatIndex(); buildCats();
@@ -1805,16 +2112,18 @@
   });
 
   $("clearBtn").addEventListener("click", function () {
-    confirmDialog("Apagar tudo", "Todos os lançamentos e dívidas serão removidos. Esta ação não pode ser desfeita.").then(function (ok) {
+    confirmDialog("Apagar tudo", "Todos os lançamentos, dívidas e valores a receber serão removidos. Esta ação não pode ser desfeita.").then(function (ok) {
       if (!ok) return;
       if (sync && sync.enabled) {
         var ts = Date.now();
         state.transacoes.forEach(function (t) { t.deleted = true; t.updatedAt = ts; });
         state.dividas.forEach(function (d) { d.deleted = true; d.updatedAt = ts; });
+        state.recebiveis.forEach(function (r) { r.deleted = true; r.updatedAt = ts; });
         pruneTombstones();
       } else {
         state.transacoes = [];
         state.dividas = [];
+        state.recebiveis = [];
       }
       save(); render(); closeSheets(); toast("Dados apagados");
     });
@@ -1947,7 +2256,10 @@
     var c = state.categorias.map(function (x) {
       return "c" + x.id + ":" + (x.updatedAt || 0) + ":" + (x.deleted ? 1 : 0);
     });
-    return a.concat(b, c).sort().join("|");
+    var e = state.recebiveis.map(function (r) {
+      return "r" + r.id + ":" + (r.updatedAt || 0) + ":" + (r.deleted ? 1 : 0);
+    });
+    return a.concat(b, c, e).sort().join("|");
   }
   function mergeStates(msg) {
     var cvs = (!Array.isArray(msg) && msg && msg.c) || [];
@@ -1984,7 +2296,17 @@
     });
     if (dchanged) state.dividas = Object.keys(dmap).map(function (k) { return dmap[k]; });
 
-    return { changed: changed || dchanged || cchanged, catsChanged: cchanged };
+    var rvs = (!Array.isArray(msg) && msg && msg.r) || [];
+    var rmap = {};
+    state.recebiveis.forEach(function (r) { rmap[r.id] = r; });
+    var rchanged = false;
+    normalizeRecebiveis(rvs).forEach(function (r) {
+      var cur = rmap[r.id];
+      if (!cur || (r.updatedAt || 0) > (cur.updatedAt || 0)) { rmap[r.id] = r; rchanged = true; }
+    });
+    if (rchanged) state.recebiveis = Object.keys(rmap).map(function (k) { return rmap[k]; });
+
+    return { changed: changed || dchanged || cchanged || rchanged, catsChanged: cchanged };
   }
 
   function statusLabel(kind) {
@@ -2098,7 +2420,7 @@
     if (!targets.length) return;
     var h = stateHash();
     if (h === sync.lastSentHash) return;
-    encryptJSON({ v: 2, t: state.transacoes, d: state.dividas, c: state.categorias, at: Date.now() }).then(function (payload) {
+    encryptJSON({ v: 3, t: state.transacoes, d: state.dividas, c: state.categorias, r: state.recebiveis, at: Date.now() }).then(function (payload) {
       targets.forEach(function (c) { try { c.publish(sync.topic, payload, { qos: 1, retain: true }); } catch (e) {} });
       sync.lastSentHash = h;
     }).catch(function () {});
@@ -2202,13 +2524,16 @@
     $("tabResumo").classList.toggle("active", v === "resumo");
     $("tabExtrato").classList.toggle("active", v === "extrato");
     $("tabDividas").classList.toggle("active", v === "dividas");
+    $("tabReceber").classList.toggle("active", v === "receber");
     $("viewResumo").hidden = v !== "resumo";
     $("viewExtrato").hidden = v !== "extrato";
     $("viewDividas").hidden = v !== "dividas";
+    $("viewReceber").hidden = v !== "receber";
   }
   $("tabResumo").addEventListener("click", function () { setView("resumo"); });
   $("tabExtrato").addEventListener("click", function () { setView("extrato"); });
   $("tabDividas").addEventListener("click", function () { setView("dividas"); });
+  $("tabReceber").addEventListener("click", function () { setView("receber"); });
 
   /* ---------------- Instalação (PWA) ---------------- */
   var deferredPrompt = null;
