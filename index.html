@@ -291,6 +291,8 @@
   .seg input:focus-visible + span{outline:2px solid var(--ink);outline-offset:2px}
   .seg input[value="entrada"]:checked + span svg{color:var(--pos)}
   .seg input[value="saida"]:checked + span svg{color:var(--neg)}
+  .seg.seg3{grid-template-columns:1fr 1fr 1fr}
+  .seg.seg3 span{font-size:12.5px;padding:11px 4px}
 
   .cats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
   .cat{position:relative;display:flex;flex-direction:column;align-items:center;gap:7px;padding:13px 6px 11px;border:1px solid var(--line);border-radius:14px;cursor:pointer;transition:.18s;background:var(--surface)}
@@ -550,7 +552,7 @@
   </section>
 </div>
 
-<footer class="verbar">Nosso Caixa · versão <b id="verMark">v8</b></footer>
+<footer class="verbar">Nosso Caixa · versão <b id="verMark">v9</b></footer>
 
 <button class="fab" id="fab">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
@@ -697,7 +699,7 @@
     </div>
 
     <div class="field">
-      <label for="recvValor">Valor total</label>
+      <label for="recvValor" id="recvValorLabel">Valor total</label>
       <div class="value-field">
         <span class="cur">R$</span>
         <input id="recvValor" inputmode="decimal" autocomplete="off" placeholder="0,00" required>
@@ -710,11 +712,25 @@
     </div>
 
     <div class="field">
-      <label for="recvData">Data prevista</label>
+      <label for="recvData" id="recvDataLabel">Data prevista</label>
       <input class="input num" type="date" id="recvData">
     </div>
 
     <div class="field">
+      <label>Repetição</label>
+      <div class="seg seg3">
+        <label><input type="radio" name="recorrencia" value="" checked><span>Não repete</span></label>
+        <label><input type="radio" name="recorrencia" value="mensal"><span>Mensal</span></label>
+        <label><input type="radio" name="recorrencia" value="semanal"><span>Semanal</span></label>
+      </div>
+    </div>
+
+    <div class="field" id="recvFimField" hidden>
+      <label for="recvFim">Repetir até (opcional)</label>
+      <input class="input num" type="date" id="recvFim">
+    </div>
+
+    <div class="field" id="recvParcelasField">
       <label for="recvParcelas">Nº de parcelas</label>
       <input class="input num" id="recvParcelas" inputmode="numeric" autocomplete="off" placeholder="Ex.: 1" value="1">
     </div>
@@ -904,7 +920,8 @@
     editingDividaId: null,
     formDividaId: null,
     editingRecvId: null,
-    formRecebivelId: null
+    formRecebivelId: null,
+    formRecebivelPeriodo: null
   };
   var now = new Date();
   state.view.y = now.getFullYear();
@@ -918,6 +935,7 @@
   }
   function todayISO() { var d = new Date(); return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
   function isoToDate(iso) { var p = String(iso).split("-"); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  function isoFromDate(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
   function inMonth(iso, y, m) { var p = String(iso).split("-"); return +p[0] === y && (+p[1] - 1) === m; }
   function fmtBRL(v) {
     return (v < 0 ? "-" : "") + "R$ " + Math.abs(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -985,6 +1003,7 @@
         data: /^\d{4}-\d{2}-\d{2}$/.test(t.data) ? t.data : todayISO(),
         dividaId: t.dividaId ? String(t.dividaId) : null,
         recebivelId: t.recebivelId ? String(t.recebivelId) : null,
+        periodo: t.periodo ? String(t.periodo) : null,
         criadoEm: criadoEm,
         updatedAt: Number(t.updatedAt) || criadoEm,
         deleted: !!t.deleted
@@ -1017,6 +1036,8 @@
         valorTotal: Math.abs(Number(r.valorTotal)) || 0,
         quemDeve: typeof r.quemDeve === "string" ? r.quemDeve.slice(0, 40) : "",
         dataPrevista: /^\d{4}-\d{2}-\d{2}$/.test(r.dataPrevista) ? r.dataPrevista : "",
+        recorrencia: (r.recorrencia === "mensal" || r.recorrencia === "semanal") ? r.recorrencia : "",
+        recorrenciaFim: /^\d{4}-\d{2}-\d{2}$/.test(r.recorrenciaFim) ? r.recorrenciaFim : "",
         parcelas: Math.max(1, Math.round(Number(r.parcelas) || 1)),
         categoria: CAT[r.categoria] ? r.categoria : "outros",
         criadoEm: criadoEm,
@@ -1145,7 +1166,73 @@
       return s + t.valor;
     }, 0);
   }
-  function recvRemaining(r) { return Math.max(0, r.valorTotal - recvReceived(r.id)); }
+  function recvRecorrente(r) { return r.recorrencia === "mensal" || r.recorrencia === "semanal"; }
+  function recvAddIntervalo(date, freq) {
+    if (freq === "semanal") { var s = new Date(date.getFullYear(), date.getMonth(), date.getDate()); s.setDate(s.getDate() + 7); return s; }
+    var y = date.getFullYear(), m = date.getMonth(), dia = date.getDate();
+    var ny = m === 11 ? y + 1 : y, nm = (m + 1) % 12;
+    var ultimo = new Date(ny, nm + 1, 0).getDate();
+    return new Date(ny, nm, Math.min(dia, ultimo));
+  }
+  function recvFimPeriodo(freq, ref) {
+    if (freq === "semanal") {
+      var d = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate());
+      var dow = (d.getDay() + 6) % 7;
+      d.setDate(d.getDate() + (6 - dow));
+      return d;
+    }
+    return new Date(ref.getFullYear(), ref.getMonth() + 1, 0);
+  }
+  function recvOcorrencias(r) {
+    if (!recvRecorrente(r)) return [{ due: r.dataPrevista || "", valor: r.valorTotal, key: r.dataPrevista || "" }];
+    var start = r.dataPrevista ? isoToDate(r.dataPrevista) : new Date();
+    var limite = recvFimPeriodo(r.recorrencia, new Date());
+    if (r.recorrenciaFim) { var fim = isoToDate(r.recorrenciaFim); if (fim < limite) limite = fim; }
+    var out = [], d = start, guard = 0;
+    while (d <= limite && guard < 2000) {
+      var iso = isoFromDate(d);
+      out.push({ due: iso, valor: r.valorTotal, key: iso });
+      d = recvAddIntervalo(d, r.recorrencia);
+      guard++;
+    }
+    return out;
+  }
+  function recvProxima(r) {
+    if (!recvRecorrente(r)) return null;
+    var start = r.dataPrevista ? isoToDate(r.dataPrevista) : new Date();
+    var limite = recvFimPeriodo(r.recorrencia, new Date());
+    var d = start, guard = 0;
+    while (d <= limite && guard < 2000) { d = recvAddIntervalo(d, r.recorrencia); guard++; }
+    if (r.recorrenciaFim && isoFromDate(d) > r.recorrenciaFim) return null;
+    return isoFromDate(d);
+  }
+  function recvReceivedMap(r) {
+    var occ = recvOcorrencias(r);
+    var map = {}, legacy = 0;
+    state.transacoes.forEach(function (t) {
+      if (t.deleted || t.recebivelId !== r.id || t.tipo !== "entrada") return;
+      if (t.periodo) map[t.periodo] = (map[t.periodo] || 0) + t.valor;
+      else legacy += t.valor;
+    });
+    for (var i = 0; i < occ.length && legacy > 0; i++) {
+      var ja = map[occ[i].key] || 0, falta = Math.max(0, occ[i].valor - ja);
+      var use = Math.min(falta, legacy);
+      if (use > 0) { map[occ[i].key] = ja + use; legacy -= use; }
+    }
+    return { occ: occ, map: map };
+  }
+  function recvPendentes(r) {
+    var info = recvReceivedMap(r);
+    return info.occ.filter(function (o) { return (info.map[o.key] || 0) < o.valor - 0.005; });
+  }
+  function recvTotalPendente(r) {
+    var info = recvReceivedMap(r);
+    return info.occ.reduce(function (s, o) { return s + Math.max(0, o.valor - (info.map[o.key] || 0)); }, 0);
+  }
+  function recvRemaining(r) {
+    if (recvRecorrente(r)) return recvTotalPendente(r);
+    return Math.max(0, r.valorTotal - recvReceived(r.id));
+  }
   function activeRecv() {
     return state.recebiveis.filter(function (r) { return !r.deleted; })
       .sort(function (a, b) { return (b.criadoEm || 0) - (a.criadoEm || 0); });
@@ -1156,8 +1243,21 @@
     return rest;
   }
   function recvOverdue(r) {
+    if (recvRecorrente(r)) {
+      var info = recvReceivedMap(r), hoje = todayISO();
+      return info.occ.some(function (o) { return (info.map[o.key] || 0) < o.valor - 0.005 && o.due < hoje; });
+    }
     if (!r.dataPrevista) return false;
     return recvRemaining(r) > 0 && r.dataPrevista < todayISO();
+  }
+  function recvFreqLabel(rec) { return rec === "semanal" ? "Semanal" : "Mensal"; }
+  function recvPerLabel(rec) { return rec === "semanal" ? "por semana" : "por mês"; }
+  function recvCompetencia(r, key) {
+    if (!key) return "";
+    if (r.recorrencia === "semanal") return "semana " + fmtDateShort(key);
+    var p = String(key).split("-");
+    if (p.length !== 3) return fmtDateShort(key);
+    return monthTitle(+p[0], +p[1] - 1).toLowerCase() + "/" + p[0].slice(2);
   }
 
   /* ---------------- Render ---------------- */
@@ -1435,7 +1535,7 @@
         var dv = t.dividaId ? debtById(t.dividaId) : null;
         var rv = t.recebivelId ? recvById(t.recebivelId) : null;
         row.querySelector(".tx-title").textContent = t.descricao || c.label;
-        row.querySelector(".tx-meta").textContent = (dv ? "Parcela \u00b7 " : "") + (rv ? "Recebimento \u00b7 " : "") + c.label;
+        row.querySelector(".tx-meta").textContent = (dv ? "Parcela \u00b7 " : "") + (rv ? "Recebimento" + (t.periodo ? " " + fmtDateShort(t.periodo) : "") + " \u00b7 " : "") + c.label;
         var amt = row.querySelector(".tx-amt");
         amt.classList.add(t.tipo === "entrada" ? "in" : "out");
         amt.textContent = (t.tipo === "entrada" ? "+ " : "\u2212 ") + fmtBRL(t.valor);
@@ -1469,12 +1569,45 @@
     }
 
     list.forEach(function (r) {
-      var recebido = recvReceived(r.id);
-      var rest = Math.max(0, r.valorTotal - recebido);
-      var done = rest <= 0;
-      var pct = r.valorTotal > 0 ? Math.min(100, (recebido / r.valorTotal) * 100) : 100;
       var c = CAT[r.categoria] || CAT.outros;
+      var rec = recvRecorrente(r);
       var overdue = recvOverdue(r);
+      var nome = r.descricao || c.label;
+      var done, rest, pct, footText, restSmall, badgeText = "";
+      var btnText = "Receber";
+      var subParts = [];
+      if (r.quemDeve) subParts.push(r.quemDeve);
+      subParts.push(c.label);
+
+      if (rec) {
+        var info = recvReceivedMap(r);
+        var pend = info.occ.filter(function (o) { return (info.map[o.key] || 0) < o.valor - 0.005; });
+        var pago = info.occ.reduce(function (s, o) { return s + Math.min(info.map[o.key] || 0, o.valor); }, 0);
+        rest = pend.reduce(function (s, o) { return s + (o.valor - (info.map[o.key] || 0)); }, 0);
+        done = pend.length === 0;
+        pct = (pago + rest) > 0 ? Math.min(100, (pago / (pago + rest)) * 100) : 100;
+        subParts.push(recvFreqLabel(r.recorrencia) + " \u00b7 " + fmtBRL(r.valorTotal) + " " + recvPerLabel(r.recorrencia));
+        if (r.recorrenciaFim) subParts.push("at\u00e9 " + fmtDateShort(r.recorrenciaFim));
+        var pagosN = info.occ.length - pend.length;
+        footText = "Recebido " + fmtBRL(pago) + " em " + pagosN + (pagosN === 1 ? " per\u00edodo" : " per\u00edodos");
+        restSmall = done ? (info.occ.length === 0 ? "a come\u00e7ar" : "em dia") : (overdue ? "atrasado" : "a receber");
+        if (done) {
+          var prox = recvProxima(r);
+          if (prox) { btnText = "Receber " + recvCompetencia(r, prox); badgeText = "Em dia"; }
+          else { badgeText = "Conclu\u00eddo"; }
+        } else {
+          btnText = "Receber " + recvCompetencia(r, pend[0].key);
+        }
+      } else {
+        var recebido = recvReceived(r.id);
+        rest = Math.max(0, r.valorTotal - recebido);
+        done = rest <= 0;
+        pct = r.valorTotal > 0 ? Math.min(100, (recebido / r.valorTotal) * 100) : 100;
+        if (r.dataPrevista) subParts.push(fmtDateShort(r.dataPrevista));
+        footText = "Recebido " + fmtBRL(recebido) + " de " + fmtBRL(r.valorTotal);
+        restSmall = done ? "recebido" : (overdue ? "atrasado" : "a receber");
+        if (done) badgeText = "Totalmente recebido";
+      }
 
       var card = document.createElement("div");
       card.className = "debt" + (done ? " done" : "") + (overdue ? " overdue" : "");
@@ -1486,15 +1619,11 @@
         '<div class="debt-track"><div class="debt-fill"></div></div>' +
         '<div class="debt-foot"><span class="debt-pago num"></span><span class="debt-pct num"></span></div>' +
         '<div class="debt-actions"></div>';
-      card.querySelector(".debt-name").textContent = r.descricao || c.label;
-      var subParts = [];
-      if (r.quemDeve) subParts.push(r.quemDeve);
-      subParts.push(c.label);
-      if (r.dataPrevista) subParts.push(fmtDateShort(r.dataPrevista));
+      card.querySelector(".debt-name").textContent = nome;
       card.querySelector(".debt-sub").textContent = subParts.join(" \u00b7 ");
       card.querySelector(".debt-rest b").textContent = fmtBRL(rest);
-      card.querySelector(".debt-rest small").textContent = done ? "recebido" : (overdue ? "atrasado" : "a receber");
-      card.querySelector(".debt-pago").textContent = "Recebido " + fmtBRL(recebido) + " de " + fmtBRL(r.valorTotal);
+      card.querySelector(".debt-rest small").textContent = restSmall;
+      card.querySelector(".debt-pago").textContent = footText;
       card.querySelector(".debt-pct").textContent = Math.round(pct) + "%";
       var fill = card.querySelector(".debt-fill");
       requestAnimationFrame(function () { fill.style.width = pct + "%"; });
@@ -1503,12 +1632,19 @@
       if (done) {
         var badge = document.createElement("div");
         badge.className = "debt-done-badge";
-        badge.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Totalmente recebido';
+        badge.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> ' + badgeText;
         card.insertBefore(badge, actions);
+        if (rec && badgeText === "Em dia") {
+          var advBtn = document.createElement("button");
+          advBtn.className = "btn btn-primary";
+          advBtn.textContent = btnText;
+          advBtn.addEventListener("click", function () { receiveRecv(r); });
+          actions.appendChild(advBtn);
+        }
       } else {
         var recvBtn = document.createElement("button");
         recvBtn.className = "btn btn-primary";
-        recvBtn.textContent = "Receber";
+        recvBtn.textContent = btnText;
         recvBtn.addEventListener("click", function () { receiveRecv(r); });
         actions.appendChild(recvBtn);
       }
@@ -1710,6 +1846,7 @@
       state.editingId = tx.id;
       state.formDividaId = tx.dividaId || null;
       state.formRecebivelId = tx.recebivelId || null;
+      state.formRecebivelPeriodo = tx.periodo || null;
       $("formTitle").textContent = "Editar lançamento";
       $("saveBtn").textContent = "Salvar alterações";
       setTipo(tx.tipo);
@@ -1733,6 +1870,7 @@
       state.editingId = null;
       state.formDividaId = null;
       state.formRecebivelId = null;
+      state.formRecebivelPeriodo = null;
       $("formTitle").textContent = "Novo lançamento";
       $("saveBtn").textContent = "Salvar lançamento";
       setTipo("saida");
@@ -1770,16 +1908,17 @@
     var data = $("dataInput").value || todayISO();
     var dividaId = state.formDividaId || null;
     var recebivelId = state.formRecebivelId || null;
+    var periodo = state.formRecebivelPeriodo || null;
 
     if (state.editingId) {
       var tx = state.transacoes.filter(function (t) { return t.id === state.editingId; })[0];
-      if (tx) { tx.valor = valor; tx.tipo = tipo; tx.descricao = descricao; tx.categoria = categoria; tx.data = data; tx.dividaId = dividaId; tx.recebivelId = recebivelId; tx.updatedAt = Date.now(); }
+      if (tx) { tx.valor = valor; tx.tipo = tipo; tx.descricao = descricao; tx.categoria = categoria; tx.data = data; tx.dividaId = dividaId; tx.recebivelId = recebivelId; tx.periodo = periodo; tx.updatedAt = Date.now(); }
       toast("Lançamento atualizado");
     } else {
       var ts = Date.now();
       state.transacoes.unshift({
         id: uid(), descricao: descricao, valor: valor, tipo: tipo,
-        categoria: categoria, data: data, dividaId: dividaId, recebivelId: recebivelId,
+        categoria: categoria, data: data, dividaId: dividaId, recebivelId: recebivelId, periodo: periodo,
         criadoEm: ts, updatedAt: ts, deleted: false
       });
       toast(recebivelId ? "Recebimento registrado" : (dividaId ? "Parcela registrada" : "Lançamento salvo"));
@@ -1876,6 +2015,26 @@
 
   /* ---------------- A Receber: telas ---------------- */
   function receiveRecv(r) {
+    if (recvRecorrente(r)) {
+      var info = recvReceivedMap(r);
+      var pend = info.occ.filter(function (o) { return (info.map[o.key] || 0) < o.valor - 0.005; });
+      var target = pend.length ? pend[0].key : recvProxima(r);
+      if (!target) { toast("Contrato encerrado"); return; }
+      var pago = info.map[target] || 0;
+      var valorPend = Math.max(0, r.valorTotal - pago) || r.valorTotal;
+      openForm(null);
+      state.formRecebivelId = r.id;
+      state.formRecebivelPeriodo = target;
+      $("formTitle").textContent = "Receber " + recvCompetencia(r, target);
+      $("saveBtn").textContent = "Registrar entrada";
+      setTipo("entrada");
+      setCategoria(r.categoria);
+      $("valor").value = valorPend.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      $("descricao").value = r.descricao || "";
+      $("dataInput").value = target;
+      var del0 = $("deleteBtn"); if (del0) del0.remove();
+      return;
+    }
     var rest = recvRemaining(r);
     if (rest <= 0) { toast("Já totalmente recebido"); return; }
     openForm(null);
@@ -1902,6 +2061,8 @@
       $("recvQuem").value = recv.quemDeve || "";
       $("recvData").value = recv.dataPrevista || "";
       $("recvParcelas").value = recv.parcelas || 1;
+      setRadio("recorrencia", recv.recorrencia || "");
+      $("recvFim").value = recv.recorrenciaFim || "";
       setRadio("recvCategoria", recv.categoria);
       actions.className = "row-actions two";
       if (!$("recvDeleteBtn")) {
@@ -1919,12 +2080,24 @@
       $("recvTitle").textContent = "Novo recebível";
       $("recvSaveBtn").textContent = "Salvar recebível";
       $("recvParcelas").value = "1";
+      setRadio("recorrencia", "");
+      $("recvFim").value = "";
       setRadio("recvCategoria", "outros");
       var d = $("recvDeleteBtn"); if (d) d.remove();
       actions.className = "row-actions";
     }
+    recvToggleRecorr();
     openSheet("recvSheet");
     setTimeout(function () { $("recvValor").focus(); }, 320);
+  }
+
+  function recvToggleRecorr() {
+    var rec = selectedRadio("recorrencia");
+    var isRec = rec === "mensal" || rec === "semanal";
+    $("recvFimField").hidden = !isRec;
+    $("recvParcelasField").hidden = isRec;
+    $("recvValorLabel").textContent = rec === "semanal" ? "Valor por semana" : (rec === "mensal" ? "Valor por mês" : "Valor total");
+    $("recvDataLabel").textContent = isRec ? "Primeira cobrança" : "Data prevista";
   }
 
   function onDeleteRecv() {
@@ -1949,20 +2122,34 @@
     var dataPrevista = /^\d{4}-\d{2}-\d{2}$/.test($("recvData").value) ? $("recvData").value : "";
     var parcelas = Math.max(1, Math.round(parseValor($("recvParcelas").value) || 1));
     var categoria = selectedRadio("recvCategoria");
+    var recorrencia = selectedRadio("recorrencia");
+    if (recorrencia !== "mensal" && recorrencia !== "semanal") recorrencia = "";
+    var recorrenciaFim = "";
+    if (recorrencia) {
+      if (!dataPrevista) dataPrevista = todayISO();
+      var fimRaw = $("recvFim").value;
+      recorrenciaFim = /^\d{4}-\d{2}-\d{2}$/.test(fimRaw) ? fimRaw : "";
+      if (recorrenciaFim && recorrenciaFim < dataPrevista) { toast("Data final anterior à primeira cobrança"); $("recvFim").focus(); return; }
+    }
 
     if (state.editingRecvId) {
       var r = recvById(state.editingRecvId);
-      if (r) { r.valorTotal = valor; r.descricao = descricao; r.quemDeve = quemDeve; r.dataPrevista = dataPrevista; r.parcelas = parcelas; r.categoria = categoria; r.updatedAt = Date.now(); }
+      if (r) { r.valorTotal = valor; r.descricao = descricao; r.quemDeve = quemDeve; r.dataPrevista = dataPrevista; r.parcelas = parcelas; r.categoria = categoria; r.recorrencia = recorrencia; r.recorrenciaFim = recorrenciaFim; r.updatedAt = Date.now(); }
       toast("Recebível atualizado");
     } else {
       var ts = Date.now();
       state.recebiveis.unshift({
         id: uid(), descricao: descricao, valorTotal: valor, quemDeve: quemDeve, dataPrevista: dataPrevista,
-        parcelas: parcelas, categoria: categoria, criadoEm: ts, updatedAt: ts, deleted: false
+        parcelas: parcelas, categoria: categoria, recorrencia: recorrencia, recorrenciaFim: recorrenciaFim,
+        criadoEm: ts, updatedAt: ts, deleted: false
       });
-      toast("Recebível criado");
+      toast(recorrencia ? "Contrato recorrente criado" : "Recebível criado");
     }
     save(); render(); closeSheets();
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll('input[name="recorrencia"]'), function (el) {
+    el.addEventListener("change", recvToggleRecorr);
   });
 
   $("newRecvBtn").addEventListener("click", function () { openRecvForm(null); });
