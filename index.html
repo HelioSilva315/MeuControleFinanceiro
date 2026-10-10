@@ -851,7 +851,7 @@
       <button class="btn btn-primary" id="notifBtn">Ativar notificações</button>
       <button class="btn btn-ghost" id="notifTest" hidden>Testar aviso</button>
     </div>
-    <div class="sync-note">O aviso é gerado pelo próprio app. Para chegar sem abrir, mantenha o app aberto (ou em segundo plano no celular).</div>
+    <div class="sync-note">O aviso é gerado pelo próprio app. No Android/Chrome com o app instalado ele também verifica em segundo plano; em outros navegadores, mantenha o app aberto (ou em segundo plano).</div>
   </div>
 
   <div class="set-block">
@@ -1086,6 +1086,7 @@
     try { localStorage.setItem(KEY, JSON.stringify(snapshot())); } catch (e) {}
     if (sync && sync.enabled) schedulePublish();
     scheduleDueCheck();
+    scheduleScheduleStore();
   }
   function pruneTombstones() {
     var limit = Date.now() - 120 * 24 * 60 * 60 * 1000;
@@ -3217,6 +3218,8 @@
         updateNotifUI();
         toast("Notificações ativadas");
         checkDueReminders();
+        registerPeriodicSync();
+        scheduleScheduleStore();
       } else {
         notifEnabled = false;
         try { localStorage.setItem(NOTIF_KEY, "0"); } catch (e) {}
@@ -3268,6 +3271,101 @@
     return out;
   }
 
+  /* ---- Armazenamento para o service worker ver (Periodic Background Sync) ---- */
+  var IDB_NAME = "nossoCaixa.notif", IDB_STORE = "kv";
+  function idbOpen() {
+    return new Promise(function (resolve, reject) {
+      if (!window.indexedDB) { reject(new Error("sem indexedDB")); return; }
+      var req = indexedDB.open(IDB_NAME, 1);
+      req.onupgradeneeded = function () {
+        var db = req.result;
+        if (!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE);
+      };
+      req.onsuccess = function () { resolve(req.result); };
+      req.onerror = function () { reject(req.error); };
+    });
+  }
+  function idbGet(key) {
+    return idbOpen().then(function (db) {
+      return new Promise(function (res, rej) {
+        var tx = db.transaction(IDB_STORE, "readonly");
+        var r = tx.objectStore(IDB_STORE).get(key);
+        r.onsuccess = function () { res(r.result); };
+        r.onerror = function () { rej(r.error); };
+      });
+    });
+  }
+  function idbSet(key, val) {
+    return idbOpen().then(function (db) {
+      return new Promise(function (res, rej) {
+        var tx = db.transaction(IDB_STORE, "readwrite");
+        tx.objectStore(IDB_STORE).put(val, key);
+        tx.oncomplete = function () { res(); };
+        tx.onerror = function () { rej(tx.error); };
+      });
+    });
+  }
+
+  function schedDueOcc(item, dateField) {
+    if (!recvRecorrente(item)) {
+      return item[dateField] ? [{ key: item[dateField], valor: item.valorTotal }] : [];
+    }
+    var d = item[dateField] ? isoToDate(item[dateField]) : new Date();
+    var horizon = new Date(Date.now() + 120 * 24 * 60 * 60 * 1000);
+    var out = [], guard = 0;
+    while (d <= horizon && guard < 2000) {
+      var key = isoFromDate(d);
+      if (item.recorrenciaFim && key > item.recorrenciaFim) break;
+      out.push({ key: key, valor: item.valorTotal });
+      d = recvAddIntervalo(d, item.recorrencia);
+      guard++;
+    }
+    return out;
+  }
+
+  function buildDueSchedule() {
+    var horizon = isoFromDate(new Date(Date.now() + 120 * 24 * 60 * 60 * 1000));
+    var out = [];
+    activeContas().forEach(function (p) {
+      var label = p.descricao || (CAT[p.categoria] || CAT.outros).label;
+      if (!recvRecorrente(p)) {
+        var rest = contaRemaining(p);
+        if (p.vencimento && p.vencimento <= horizon && rest > 0.005) out.push({ kind: "conta", id: p.id, key: p.vencimento, label: label, valor: rest });
+        return;
+      }
+      var info = contaReceivedMap(p);
+      schedDueOcc(p, "vencimento").forEach(function (occ) {
+        if (occ.key > horizon) return;
+        var r = Math.max(0, occ.valor - (info.map[occ.key] || 0));
+        if (r > 0.005) out.push({ kind: "conta", id: p.id, key: occ.key, label: label, valor: r });
+      });
+    });
+    activeRecv().forEach(function (r) {
+      var label = r.descricao || (CAT[r.categoria] || CAT.outros).label;
+      if (!recvRecorrente(r)) {
+        var rest = recvRemaining(r);
+        if (r.dataPrevista && r.dataPrevista <= horizon && rest > 0.005) out.push({ kind: "recv", id: r.id, key: r.dataPrevista, label: label, valor: rest });
+        return;
+      }
+      var info = recvReceivedMap(r);
+      schedDueOcc(r, "dataPrevista").forEach(function (occ) {
+        if (occ.key > horizon) return;
+        var rem = Math.max(0, occ.valor - (info.map[occ.key] || 0));
+        if (rem > 0.005) out.push({ kind: "recv", id: r.id, key: occ.key, label: label, valor: rem });
+      });
+    });
+    return out;
+  }
+
+  var schedStoreTimer = null;
+  function scheduleScheduleStore() {
+    if (!notifActive()) return;
+    clearTimeout(schedStoreTimer);
+    schedStoreTimer = setTimeout(function () {
+      try { idbSet("schedule", buildDueSchedule()).catch(function () {}); } catch (e) {}
+    }, 2500);
+  }
+
   function persistNotified() {
     try { localStorage.setItem(NOTIFIED_KEY, JSON.stringify(notifiedMap)); } catch (e) {}
   }
@@ -3276,6 +3374,14 @@
     if (!notifActive()) return;
     var hoje = todayISO();
     Object.keys(notifiedMap).forEach(function (k) { if (k.slice(-10) !== hoje) delete notifiedMap[k]; });
+    idbGet("notified").then(function (idbMap) {
+      idbMap = idbMap || {};
+      Object.keys(idbMap).forEach(function (k) { if (k.slice(-10) === hoje) notifiedMap[k] = true; });
+      runDueNotifications(hoje);
+    }).catch(function () { runDueNotifications(hoje); });
+  }
+
+  function runDueNotifications(hoje) {
     var fresh = dueItems().filter(function (it) {
       return !notifiedMap[it.kind + ":" + it.id + ":" + it.key + ":" + hoje];
     });
@@ -3295,8 +3401,27 @@
       if (fresh.length > 3) partes.push("e mais " + (fresh.length - 3) + "...");
       notifShow(fresh.length + " vencimentos para hoje", partes.join("\n"), "due-summary");
     }
-    fresh.forEach(function (it) { notifiedMap[it.kind + ":" + it.id + ":" + it.key + ":" + hoje] = true; });
+    var novos = {};
+    fresh.forEach(function (it) {
+      var k = it.kind + ":" + it.id + ":" + it.key + ":" + hoje;
+      notifiedMap[k] = true;
+      novos[k] = true;
+    });
     persistNotified();
+    idbGet("notified").then(function (m) {
+      m = m || {};
+      Object.keys(novos).forEach(function (k) { m[k] = true; });
+      Object.keys(m).forEach(function (k) { if (k.slice(-10) !== hoje) delete m[k]; });
+      return idbSet("notified", m);
+    }).catch(function () {});
+  }
+
+  function registerPeriodicSync() {
+    if (!notifActive() || !("serviceWorker" in navigator)) return;
+    navigator.serviceWorker.ready.then(function (reg) {
+      if (!reg.periodicSync || !reg.periodicSync.register) return;
+      reg.periodicSync.register("due-check", { minInterval: 6 * 60 * 60 * 1000 }).catch(function () {});
+    }).catch(function () {});
   }
 
   var dueTimer = null;
@@ -3310,6 +3435,12 @@
     if (notifEnabled && notifPermission() === "granted") {
       notifEnabled = false;
       try { localStorage.setItem(NOTIF_KEY, "0"); } catch (e) {}
+      if ("serviceWorker" in navigator && navigator.serviceWorker.ready) {
+        navigator.serviceWorker.ready.then(function (reg) {
+          if (reg.periodicSync && reg.periodicSync.unregister) reg.periodicSync.unregister("due-check").catch(function () {});
+        }).catch(function () {});
+      }
+      idbSet("schedule", []).catch(function () {});
       updateNotifUI();
       toast("Notificações desativadas");
       return;
@@ -3381,6 +3512,8 @@
 
   if (notifActive()) {
     setTimeout(checkDueReminders, 1500);
+    registerPeriodicSync();
+    scheduleScheduleStore();
     if (typeof setInterval === "function") {
       setInterval(function () { if (document.visibilityState === "visible") checkDueReminders(); }, 15 * 60 * 1000);
     }
