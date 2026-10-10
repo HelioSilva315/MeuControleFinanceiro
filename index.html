@@ -142,6 +142,30 @@
   .panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
   .panel-head h2{font-size:13.5px;font-weight:650;letter-spacing:-.005em}
   .panel-head .hint{font-size:11.5px;color:var(--faint)}
+  .panel-head .btn{padding:7px 12px;font-size:12.5px;border-radius:10px}
+  .bud{margin-bottom:14px}
+  .bud:last-child{margin-bottom:0}
+  .bud-top{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12.5px;margin-bottom:7px}
+  .bud-name{display:flex;align-items:center;gap:8px;min-width:0}
+  .bud-name b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bud-dot{width:9px;height:9px;border-radius:3px;flex:none}
+  .bud-vals{color:var(--muted);font-size:12px;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .bud-track{height:8px;border-radius:99px;background:var(--surface-2);border:1px solid var(--line);overflow:hidden}
+  .bud-fill{height:100%;border-radius:99px;width:0;transition:width .5s cubic-bezier(.22,1,.36,1)}
+  .bud.ok .bud-fill{background:var(--pos)}
+  .bud.warn .bud-fill{background:#d99a2b}
+  .bud.over .bud-fill{background:var(--neg)}
+  .bud-note{font-size:11.5px;color:var(--muted);margin-top:6px}
+  .bud.warn .bud-note{color:#b9831f}
+  .bud.over .bud-note{color:var(--neg)}
+  .orc-row{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--line)}
+  .orc-row:last-child{border-bottom:0}
+  .orc-row .orc-cat{display:flex;align-items:center;gap:9px;font-size:13.5px;min-width:0}
+  .orc-row .orc-cat i{width:10px;height:10px;border-radius:3px;flex:none;display:block}
+  .orc-row .orc-val{margin-left:auto;font-weight:600;font-size:13.5px;font-variant-numeric:tabular-nums}
+  .orc-row .orc-actions{display:flex;gap:6px;flex:none}
+  .orc-mini{padding:7px 10px;border-radius:9px;font-size:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);transition:.15s}
+  .orc-mini:hover{background:var(--surface-2)}
   .tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;background:var(--surface-2);padding:5px;border-radius:14px;border:1px solid var(--line);margin-bottom:14px}
   .tabs button{padding:10px 2px;border-radius:10px;font-size:11.5px;font-weight:600;color:var(--muted);transition:.18s}
   .tabs button.active{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(16,24,40,.12)}
@@ -474,6 +498,14 @@
 
     <section class="panel">
       <div class="panel-head">
+        <h2>Orçamento do mês</h2>
+        <button type="button" class="btn btn-ghost" id="orcEditBtn">Definir</button>
+      </div>
+      <div id="orcList"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
         <h2>Últimos 6 meses</h2>
         <span class="hint">entradas x saídas</span>
       </div>
@@ -571,7 +603,7 @@
   </section>
 </div>
 
-<footer class="verbar">Nosso Caixa · versão <b id="verMark">v10</b></footer>
+<footer class="verbar">Nosso Caixa · versão <b id="verMark">v11</b></footer>
 
 <button class="fab" id="fab">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
@@ -828,6 +860,35 @@
   </form>
 </div>
 
+<!-- Orçamento sheet -->
+<div class="sheet" id="orcSheet" role="dialog" aria-modal="true" aria-labelledby="orcTitle">
+  <div class="grip"></div>
+  <div class="sheet-head">
+    <h2 id="orcTitle">Orçamento do mês</h2>
+    <button class="close" data-close aria-label="Fechar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    </button>
+  </div>
+  <form id="orcForm">
+    <div class="field">
+      <label>Categoria</label>
+      <div class="cats" id="orcCats"></div>
+    </div>
+    <div class="field">
+      <label for="orcValor">Limite mensal</label>
+      <div class="value-field">
+        <span class="cur">R$</span>
+        <input id="orcValor" inputmode="decimal" autocomplete="off" placeholder="0,00" required>
+      </div>
+    </div>
+    <div class="row-actions" id="orcActions">
+      <button type="submit" class="btn btn-primary btn-block" id="orcSaveBtn">Salvar orçamento</button>
+    </div>
+    <button type="button" class="btn btn-ghost btn-block" id="orcCancelBtn" style="margin-top:10px" hidden>Cancelar edição</button>
+  </form>
+  <div id="orcManage" style="margin-top:18px"></div>
+</div>
+
 <!-- Settings sheet -->
 <div class="sheet" id="settingsSheet" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
   <div class="grip"></div>
@@ -1006,6 +1067,7 @@
     dividas: [],
     recebiveis: [],
     contas: [],
+    orcamentos: [],
     categorias: [],
     view: { y: 0, m: 0 },
     query: "",
@@ -1017,7 +1079,8 @@
     formRecebivelPeriodo: null,
     editingContaId: null,
     formContaId: null,
-    formContaPeriodo: null
+    formContaPeriodo: null,
+    editingOrcId: null
   };
   var now = new Date();
   state.view.y = now.getFullYear();
@@ -1080,22 +1143,24 @@
 
   /* ---------------- Persistência ---------------- */
   function snapshot() {
-    return { v: 3, transacoes: state.transacoes, dividas: state.dividas, categorias: state.categorias, recebiveis: state.recebiveis, contas: state.contas };
+    return { v: 3, transacoes: state.transacoes, dividas: state.dividas, categorias: state.categorias, recebiveis: state.recebiveis, contas: state.contas, orcamentos: state.orcamentos };
   }
   function save() {
     try { localStorage.setItem(KEY, JSON.stringify(snapshot())); } catch (e) {}
     if (sync && sync.enabled) schedulePublish();
     scheduleDueCheck();
     scheduleScheduleStore();
+    checkBudgetAlerts();
   }
   function pruneTombstones() {
     var limit = Date.now() - 120 * 24 * 60 * 60 * 1000;
-    var before = state.transacoes.length + state.dividas.length + state.recebiveis.length + state.contas.length;
+    var before = state.transacoes.length + state.dividas.length + state.recebiveis.length + state.contas.length + state.orcamentos.length;
     state.transacoes = state.transacoes.filter(function (t) { return !t.deleted || (t.updatedAt || 0) > limit; });
     state.dividas = state.dividas.filter(function (d) { return !d.deleted || (d.updatedAt || 0) > limit; });
     state.recebiveis = state.recebiveis.filter(function (r) { return !r.deleted || (r.updatedAt || 0) > limit; });
     state.contas = state.contas.filter(function (c) { return !c.deleted || (c.updatedAt || 0) > limit; });
-    return (state.transacoes.length + state.dividas.length + state.recebiveis.length + state.contas.length) !== before;
+    state.orcamentos = state.orcamentos.filter(function (o) { return !o.deleted || (o.updatedAt || 0) > limit; });
+    return (state.transacoes.length + state.dividas.length + state.recebiveis.length + state.contas.length + state.orcamentos.length) !== before;
   }
   function normalize(list) {
     if (!Array.isArray(list)) return [];
@@ -1174,6 +1239,20 @@
       };
     }).filter(function (c0) { return c0.valorTotal > 0 || c0.deleted; });
   }
+  function normalizeOrcamentos(list) {
+    if (!Array.isArray(list)) return [];
+    return list.filter(function (o) { return o && typeof o === "object"; }).map(function (o) {
+      var criadoEm = Number(o.criadoEm) || Date.now();
+      return {
+        id: o.id ? String(o.id) : uid(),
+        categoria: CAT[o.categoria] ? o.categoria : "outros",
+        valor: Math.abs(Number(o.valor)) || 0,
+        criadoEm: criadoEm,
+        updatedAt: Number(o.updatedAt) || criadoEm,
+        deleted: !!o.deleted
+      };
+    }).filter(function (o) { return o.valor > 0 || o.deleted; });
+  }
   function normalizeCats(list) {
     if (!Array.isArray(list)) return [];
     return list.filter(function (c) { return c && typeof c === "object"; }).map(function (c) {
@@ -1226,6 +1305,7 @@
           state.dividas = [];
           state.recebiveis = [];
           state.contas = [];
+          state.orcamentos = [];
         } else if (parsed && typeof parsed === "object") {
           state.categorias = normalizeCats(parsed.categorias);
           rebuildCatIndex();
@@ -1233,6 +1313,7 @@
           state.dividas = normalizeDebts(parsed.dividas);
           state.recebiveis = normalizeRecebiveis(parsed.recebiveis);
           state.contas = normalizeContas(parsed.contas);
+          state.orcamentos = normalizeOrcamentos(parsed.orcamentos);
         }
         return;
       }
@@ -1244,10 +1325,11 @@
         state.dividas = [];
         state.recebiveis = [];
         state.contas = [];
+        state.orcamentos = [];
         save();
         localStorage.removeItem(OLD_KEY);
       }
-    } catch (e) { state.categorias = []; rebuildCatIndex(); state.transacoes = []; state.dividas = []; state.recebiveis = []; state.contas = []; }
+    } catch (e) { state.categorias = []; rebuildCatIndex(); state.transacoes = []; state.dividas = []; state.recebiveis = []; state.contas = []; state.orcamentos = []; }
   }
 
   /* ---------------- Cálculos ---------------- */
@@ -1944,11 +2026,159 @@
     });
   }
 
+  /* ---------------- Orçamento ---------------- */
+  var ORC_ALERT_KEY = "nossoCaixa.budgetAlert";
+  var orcAlerts = {};
+  try { orcAlerts = JSON.parse(localStorage.getItem(ORC_ALERT_KEY) || "{}") || {}; } catch (e) { orcAlerts = {}; }
+
+  function activeOrcamentos() {
+    return state.orcamentos.filter(function (o) { return !o.deleted && o.valor > 0; });
+  }
+  function orcamentoByCat(catId) {
+    for (var i = 0; i < state.orcamentos.length; i++) {
+      var o = state.orcamentos[i];
+      if (!o.deleted && o.categoria === catId && o.valor > 0) return o;
+    }
+    return null;
+  }
+  function budgetStatus(md) {
+    md = md || monthData(state.view.y, state.view.m);
+    return activeOrcamentos().map(function (o) {
+      var spent = md.byCat[o.categoria] || 0;
+      var pct = o.valor > 0 ? (spent / o.valor) * 100 : 0;
+      return {
+        id: o.id, categoria: o.categoria, limite: o.valor, gasto: spent,
+        restante: o.valor - spent, pct: pct,
+        estado: spent > o.valor + 0.005 ? "over" : (pct >= 80 ? "warn" : "ok")
+      };
+    }).sort(function (a, b) { return b.pct - a.pct; });
+  }
+  function renderOrcamento(md) {
+    var wrap = $("orcList");
+    if (!wrap) return;
+    wrap.innerHTML = "";
+    var list = budgetStatus(md);
+    if (!list.length) {
+      var empty = document.createElement("div");
+      empty.className = "dash-empty";
+      empty.textContent = "Defina limites por categoria e veja o quanto ainda pode gastar neste mês.";
+      wrap.appendChild(empty);
+      return;
+    }
+    list.forEach(function (b) {
+      var c = CAT[b.categoria] || CAT.outros;
+      var width = Math.max(0, Math.min(100, b.pct));
+      var row = document.createElement("div");
+      row.className = "bud " + b.estado;
+      row.innerHTML =
+        '<div class="bud-top">' +
+          '<span class="bud-name"><span class="bud-dot" style="background:' + c.color + '"></span><b></b></span>' +
+          '<span class="bud-vals num"></span>' +
+        '</div>' +
+        '<div class="bud-track"><div class="bud-fill"></div></div>' +
+        '<div class="bud-note"></div>';
+      row.querySelector(".bud-name b").textContent = c.label;
+      row.querySelector(".bud-vals").textContent = fmtBRL(b.gasto) + " de " + fmtBRL(b.limite);
+      row.querySelector(".bud-note").textContent = b.estado === "over"
+        ? "Estourou " + fmtBRL(-b.restante) + " \u00b7 " + Math.round(b.pct) + "% usado"
+        : "Restam " + fmtBRL(b.restante) + " \u00b7 " + Math.round(b.pct) + "% usado";
+      var fill = row.querySelector(".bud-fill");
+      requestAnimationFrame(function () { fill.style.width = width + "%"; });
+      wrap.appendChild(row);
+    });
+  }
+  function renderOrcManage() {
+    var wrap = $("orcManage");
+    if (!wrap) return;
+    wrap.innerHTML = "";
+    var list = activeOrcamentos().slice().sort(function (a, b) {
+      var ca = CAT[a.categoria] || CAT.outros, cb = CAT[b.categoria] || CAT.outros;
+      return ca.label.localeCompare(cb.label, "pt-BR");
+    });
+    if (!list.length) {
+      var empty = document.createElement("div");
+      empty.className = "dash-empty";
+      empty.textContent = "Nenhum orçamento definido ainda.";
+      wrap.appendChild(empty);
+      return;
+    }
+    list.forEach(function (o) {
+      var c = CAT[o.categoria] || CAT.outros;
+      var row = document.createElement("div");
+      row.className = "orc-row";
+      row.innerHTML =
+        '<span class="orc-cat"><i style="background:' + c.color + '"></i><span></span></span>' +
+        '<span class="orc-val num"></span>' +
+        '<span class="orc-actions"></span>';
+      row.querySelector(".orc-cat span").textContent = c.label;
+      row.querySelector(".orc-val").textContent = fmtBRL(o.valor);
+      var edit = document.createElement("button");
+      edit.type = "button"; edit.className = "orc-mini"; edit.textContent = "Editar";
+      edit.addEventListener("click", function () { openOrcForm(o); });
+      var del = document.createElement("button");
+      del.type = "button"; del.className = "orc-mini"; del.textContent = "Remover";
+      del.addEventListener("click", function () { deleteOrcamento(o); });
+      row.querySelector(".orc-actions").appendChild(edit);
+      row.querySelector(".orc-actions").appendChild(del);
+      wrap.appendChild(row);
+    });
+  }
+  function openOrcForm(orc) {
+    var form = $("orcForm");
+    if (form) form.reset();
+    state.editingOrcId = orc ? orc.id : null;
+    $("orcTitle").textContent = orc ? "Editar orçamento" : "Orçamento do mês";
+    $("orcSaveBtn").textContent = orc ? "Salvar alterações" : "Salvar orçamento";
+    $("orcCancelBtn").hidden = !orc;
+    if (orc) {
+      setRadio("orcCategoria", orc.categoria);
+      $("orcValor").value = orc.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    } else {
+      setRadio("orcCategoria", "alimentacao");
+      $("orcValor").value = "";
+    }
+    renderOrcManage();
+    openSheet("orcSheet");
+  }
+  function deleteOrcamento(o) {
+    o.deleted = true; o.updatedAt = Date.now();
+    if (state.editingOrcId === o.id) { state.editingOrcId = null; $("orcCancelBtn").hidden = true; $("orcTitle").textContent = "Orçamento do mês"; $("orcSaveBtn").textContent = "Salvar orçamento"; }
+    save(); render(); renderOrcManage();
+    toast("Orçamento removido");
+  }
+  function checkBudgetAlerts() {
+    var d = new Date();
+    var y = d.getFullYear(), m = d.getMonth();
+    var md = monthData(y, m);
+    var mk = y + "-" + pad(m + 1);
+    var changed = false;
+    activeOrcamentos().forEach(function (o) {
+      if (o.valor <= 0) return;
+      var spent = md.byCat[o.categoria] || 0;
+      var pct = (spent / o.valor) * 100;
+      var level = spent > o.valor + 0.005 ? "over" : (pct >= 80 ? "warn" : null);
+      if (!level) return;
+      var key = o.categoria + ":" + mk + ":" + level;
+      if (orcAlerts[key]) return;
+      orcAlerts[o.categoria + ":" + mk + ":warn"] = 1;
+      orcAlerts[key] = 1;
+      changed = true;
+      var c = CAT[o.categoria] || CAT.outros;
+      var msg = level === "over"
+        ? "Orçamento de " + c.label + " estourado (" + fmtBRL(spent) + " de " + fmtBRL(o.valor) + ")"
+        : "Você já usou " + Math.round(pct) + "% do orçamento de " + c.label;
+      toast(msg);
+      if (notifActive()) notifShow("Orçamento: " + c.label, msg, "orc-" + o.categoria + "-" + mk);
+    });
+    if (changed) { try { localStorage.setItem(ORC_ALERT_KEY, JSON.stringify(orcAlerts)); } catch (e) {} }
+  }
+
   function render() {
     var md = monthData(state.view.y, state.view.m);
     renderMonth();
     renderHero(md);
     renderDashboard(md);
+    renderOrcamento(md);
     renderList(md);
     renderDividas();
     renderReceber();
@@ -2004,15 +2234,20 @@
     $("debtCats").innerHTML = "";
     var prevPagar = selectedRadio("pagarCategoria");
     $("recvCats").innerHTML = "";
+    var orcWrap = $("orcCats");
+    var prevOrc = selectedRadio("orcCategoria");
+    if (orcWrap) orcWrap.innerHTML = "";
     var list = activeCats();
     buildCatsInto(catsWrap, "categoria", list);
     buildCatsInto($("debtCats"), "debtCategoria", list);
     buildCatsInto($("recvCats"), "recvCategoria", list);
     buildCatsInto($("pagarCats"), "pagarCategoria", list);
+    if (orcWrap) buildCatsInto(orcWrap, "orcCategoria", list);
     if (prevCat) setCategoria(prevCat);
     if (prevDebt) setRadio("debtCategoria", prevDebt);
     if (prevRecv) setRadio("recvCategoria", prevRecv);
     if (prevPagar) setRadio("pagarCategoria", prevPagar);
+    if (prevOrc && prevOrc !== "outros") setRadio("orcCategoria", prevOrc);
   }
 
   /* ---------------- Categorias personalizadas ---------------- */
@@ -2677,16 +2912,17 @@
       try { data = JSON.parse(fromB64(text.trim())); }
       catch (e2) { toast("Código inválido"); return; }
     }
-    var txs, dvs, cvs, rvs, pvs;
-    if (Array.isArray(data)) { txs = data; dvs = []; cvs = []; rvs = []; pvs = []; }
-    else if (data && typeof data === "object") { txs = data.transacoes || []; dvs = data.dividas || []; cvs = data.categorias || []; rvs = data.recebiveis || []; pvs = data.contas || []; }
+    var txs, dvs, cvs, rvs, pvs, ovs;
+    if (Array.isArray(data)) { txs = data; dvs = []; cvs = []; rvs = []; pvs = []; ovs = []; }
+    else if (data && typeof data === "object") { txs = data.transacoes || []; dvs = data.dividas || []; cvs = data.categorias || []; rvs = data.recebiveis || []; pvs = data.contas || []; ovs = data.orcamentos || []; }
     else { toast("Formato não reconhecido"); return; }
     var incoming = normalize(txs);
     var incomingDebts = normalizeDebts(dvs);
     var incomingCats = normalizeCats(cvs);
     var incomingRecv = normalizeRecebiveis(rvs);
     var incomingContas = normalizeContas(pvs);
-    if (!incoming.length && !incomingDebts.length && !incomingCats.length && !incomingRecv.length && !incomingContas.length) { toast("Nenhum lançamento encontrado"); return; }
+    var incomingOrc = normalizeOrcamentos(ovs);
+    if (!incoming.length && !incomingDebts.length && !incomingCats.length && !incomingRecv.length && !incomingContas.length && !incomingOrc.length) { toast("Nenhum lançamento encontrado"); return; }
     var nTx = incoming.length, nDv = incomingDebts.length;
     confirmDialog(
       "Importar dados",
@@ -2710,13 +2946,17 @@
         var cids2 = {}; state.contas.forEach(function (c) { cids2[c.id] = true; });
         var addedC2 = 0;
         incomingContas.forEach(function (c) { if (!cids2[c.id]) { state.contas.push(c); cids2[c.id] = true; addedC2++; } });
-        toast((added || addedD || addedC || addedR || addedC2) ? (added + addedD + addedC + addedR + addedC2) + " item(ns) adicionado(s)" : "Tudo já estava atualizado");
+        var oids = {}; state.orcamentos.forEach(function (o) { oids[o.id] = true; });
+        var addedO = 0;
+        incomingOrc.forEach(function (o) { if (!oids[o.id]) { state.orcamentos.push(o); oids[o.id] = true; addedO++; } });
+        toast((added || addedD || addedC || addedR || addedC2 || addedO) ? (added + addedD + addedC + addedR + addedC2 + addedO) + " item(ns) adicionado(s)" : "Tudo já estava atualizado");
       } else {
         state.transacoes = incoming;
         state.dividas = incomingDebts;
         state.categorias = incomingCats;
         state.recebiveis = incomingRecv;
         state.contas = incomingContas;
+        state.orcamentos = incomingOrc;
         toast("Dados substituídos");
       }
       rebuildCatIndex(); buildCats();
@@ -2749,15 +2989,43 @@
         state.dividas.forEach(function (d) { d.deleted = true; d.updatedAt = ts; });
         state.recebiveis.forEach(function (r) { r.deleted = true; r.updatedAt = ts; });
         state.contas.forEach(function (c) { c.deleted = true; c.updatedAt = ts; });
+        state.orcamentos.forEach(function (o) { o.deleted = true; o.updatedAt = ts; });
         pruneTombstones();
       } else {
         state.transacoes = [];
         state.dividas = [];
         state.recebiveis = [];
         state.contas = [];
+        state.orcamentos = [];
       }
       save(); render(); closeSheets(); toast("Dados apagados");
     });
+  });
+
+  /* ---------------- Orçamento: telas ---------------- */
+  $("orcEditBtn").addEventListener("click", function () { openOrcForm(null); });
+  $("orcCancelBtn").addEventListener("click", function () { openOrcForm(null); });
+  $("orcForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var valor = parseValor($("orcValor").value);
+    if (!isFinite(valor) || valor <= 0) { toast("Informe um limite válido"); $("orcValor").focus(); return; }
+    var catRaw = selectedRadio("orcCategoria");
+    var cat = CAT[catRaw] ? catRaw : "outros";
+    var ts = Date.now();
+    var existing = state.editingOrcId ? state.orcamentos.filter(function (o) { return o.id === state.editingOrcId; })[0] : null;
+    var dup = orcamentoByCat(cat);
+    if (dup && (!existing || dup.id !== existing.id)) {
+      dup.valor = valor; dup.updatedAt = ts;
+      toast("Orçamento atualizado");
+    } else if (existing) {
+      existing.categoria = cat; existing.valor = valor; existing.updatedAt = ts;
+      toast("Orçamento atualizado");
+    } else {
+      state.orcamentos.push({ id: uid(), categoria: cat, valor: valor, criadoEm: ts, updatedAt: ts, deleted: false });
+      toast("Orçamento salvo");
+    }
+    openOrcForm(null);
+    save(); render();
   });
 
   /* ---------------- Toast ---------------- */
@@ -2893,7 +3161,10 @@
     var f = state.contas.map(function (p) {
       return "p" + p.id + ":" + (p.updatedAt || 0) + ":" + (p.deleted ? 1 : 0);
     });
-    return a.concat(b, c, e, f).sort().join("|");
+    var g = state.orcamentos.map(function (o) {
+      return "o" + o.id + ":" + (o.updatedAt || 0) + ":" + (o.deleted ? 1 : 0);
+    });
+    return a.concat(b, c, e, f, g).sort().join("|");
   }
   function mergeStates(msg) {
     var cvs = (!Array.isArray(msg) && msg && msg.c) || [];
@@ -2950,7 +3221,17 @@
     });
     if (pchanged) state.contas = Object.keys(pmap).map(function (k) { return pmap[k]; });
 
-    return { changed: changed || dchanged || cchanged || rchanged || pchanged, catsChanged: cchanged };
+    var ovs = (!Array.isArray(msg) && msg && msg.o) || [];
+    var omap = {};
+    state.orcamentos.forEach(function (o) { omap[o.id] = o; });
+    var ochanged = false;
+    normalizeOrcamentos(ovs).forEach(function (o) {
+      var cur = omap[o.id];
+      if (!cur || (o.updatedAt || 0) > (cur.updatedAt || 0)) { omap[o.id] = o; ochanged = true; }
+    });
+    if (ochanged) state.orcamentos = Object.keys(omap).map(function (k) { return omap[k]; });
+
+    return { changed: changed || dchanged || cchanged || rchanged || pchanged || ochanged, catsChanged: cchanged };
   }
 
   function statusLabel(kind) {
@@ -3064,7 +3345,7 @@
     if (!targets.length) return;
     var h = stateHash();
     if (h === sync.lastSentHash) return;
-    encryptJSON({ v: 3, t: state.transacoes, d: state.dividas, c: state.categorias, r: state.recebiveis, p: state.contas, at: Date.now() }).then(function (payload) {
+    encryptJSON({ v: 3, t: state.transacoes, d: state.dividas, c: state.categorias, r: state.recebiveis, p: state.contas, o: state.orcamentos, at: Date.now() }).then(function (payload) {
       targets.forEach(function (c) { try { c.publish(sync.topic, payload, { qos: 1, retain: true }); } catch (e) {} });
       sync.lastSentHash = h;
     }).catch(function () {});
