@@ -289,5 +289,7 @@ grant execute on function public.is_admin()         to authenticated;
 --    insert into public.admins (email) values ('outro@email.com')
 --      on conflict (email) do nothing;
 -- ---------------------------------------------------------------------
-insert into public.admins (email) values ('helio.silva315@gmail.com')
+insert into public.admins (email) values
+  ('helio.silva315@gmail.com'),
+  ('julianaalves74@hotmail.com')
   on conflict (email) do nothing;

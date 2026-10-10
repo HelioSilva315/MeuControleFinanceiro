@@ -63,9 +63,10 @@ insert into public.admins (email) values ('seu@email.com')
   on conflict (email) do nothing;
 ```
 
-O e-mail `helio.silva315@gmail.com` já vem cadastrado no `schema.sql` — troque ou
-adicione os seus. Depois de criar a conta no app e entrar, o premium aparece
-sozinho (o app confere pelo `/entitlement`).
+O `schema.sql` já vem com dois e-mails de exemplo cadastrados
+(`helio.silva315@gmail.com` e `julianaalves74@hotmail.com`) — troque ou adicione
+os seus. Depois de criar a conta no app e entrar, o premium aparece sozinho (o
+app confere pelo `/entitlement`).
 
 ## 3. Publicar as funções
 
