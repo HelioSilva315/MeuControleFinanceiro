@@ -283,6 +283,7 @@
   /* ---------- Versão ---------- */
   .verbar{text-align:center;font-size:11px;line-height:1.6;color:var(--mut);opacity:.85;padding:16px 16px calc(86px + env(safe-area-inset-bottom));letter-spacing:.02em}
   .verbar b{font-weight:600}
+  .verbar a{color:inherit;text-decoration:none;border-bottom:1px solid currentColor;opacity:.9;margin:0 2px}
 
   /* ---------- Sheets ---------- */
   .backdrop{position:fixed;inset:0;background:rgba(18,20,24,.5);backdrop-filter:blur(3px);opacity:0;pointer-events:none;transition:opacity .28s;z-index:40}
@@ -603,7 +604,7 @@
   </section>
 </div>
 
-<footer class="verbar">Nosso Caixa · versão <b id="verMark">v14</b></footer>
+<footer class="verbar">Nosso Caixa · versão <b id="verMark">v15</b><br><a href="./privacidade.html">Política de Privacidade</a> · <a href="./termos.html">Termos de Uso</a></footer>
 
 <button class="fab" id="fab">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
@@ -919,6 +920,9 @@
         <button class="btn btn-danger" id="cloudSignOut">Sair</button>
       </div>
       <div class="sync-note" id="cloudNote"></div>
+      <div class="set-actions" style="margin-top:12px">
+        <button class="btn btn-danger" id="cloudDelete">Excluir minha conta</button>
+      </div>
     </div>
   </div>
 
@@ -3662,6 +3666,26 @@
       .then(function () { cloudBusy("cloudDownload", false); });
   }
 
+  function cloudDeleteAccount() {
+    if (!cloudConfigured()) { toast("Serviço de nuvem ainda não configurado"); return; }
+    if (!(cloud.session && cloud.session.a)) { toast("Entre na sua conta primeiro"); return; }
+    confirmDialog("Excluir minha conta",
+      "Isto apaga sua conta e os dados na nuvem (incluindo o backup cifrado). Os lançamentos salvos neste aparelho permanecem. Esta ação não pode ser desfeita.",
+      "Excluir", "Cancelar").then(function (ok) {
+        if (!ok) return;
+        cloudBusy("cloudDelete", true);
+        return cloudEnsureSession().then(function () {
+          return cloudFetch("/functions/v1/delete-account", { method: "POST" });
+        }).then(function () {
+          cloud.session = null; cloud.premium = false; cloud.householdId = null;
+          cloud.until = null; cloud.subs = null; cloud.loaded = false;
+          cloudSaveSession(); cloudRender();
+          toast("Conta excluída");
+        }).catch(function (e) { toast("Não deu para excluir: " + (e.message || e)); })
+          .then(function () { cloudBusy("cloudDelete", false); });
+      });
+  }
+
   function cloudRender() {
     var block = $("cloudBlock"); if (!block) return;
     if (!cloudConfigured()) { block.hidden = true; return; }
@@ -3736,6 +3760,7 @@
 
   if ($("cloudUpload")) $("cloudUpload").addEventListener("click", cloudUpload);
   if ($("cloudDownload")) $("cloudDownload").addEventListener("click", cloudDownload);
+  if ($("cloudDelete")) $("cloudDelete").addEventListener("click", cloudDeleteAccount);
 
   /* ---------------- Tema ---------------- */
   function applyTheme(t) {

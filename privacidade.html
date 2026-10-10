@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#14171b">
+<title>Política de Privacidade — Nosso Caixa</title>
+<link rel="icon" type="image/png" href="./icons/icon-192.png">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#f3f4f1; --surface:#ffffff; --ink:#15181c; --ink-soft:#3d424a;
+    --muted:#71767f; --faint:#9aa0a8; --line:#e7e8e3;
+  }
+  body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.65;font-size:16px}
+  .wrap{max-width:760px;margin:0 auto;padding:28px 20px 64px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700}
+  .brand .dot{width:22px;height:22px;border-radius:7px;background:var(--ink)}
+  h1{font-size:26px;line-height:1.25;margin:18px 0 6px}
+  .meta{color:var(--muted);font-size:13px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px 22px;margin:16px 0}
+  h2{font-size:17px;margin:22px 0 8px}
+  h2:first-child{margin-top:0}
+  p,li{color:var(--ink-soft);font-size:15px}
+  ul{margin:8px 0 8px 22px}
+  li{margin:5px 0}
+  a{color:var(--ink);text-decoration:underline;text-underline-offset:2px}
+  code{background:#f6f7f4;border:1px solid var(--line);border-radius:6px;padding:1px 5px;font-size:13px}
+  .todo{background:#fff7e6;border:1px solid #f0d59a;border-radius:12px;padding:14px 16px;margin:16px 0;font-size:14px;color:#7a5a12}
+  .todo b{color:#5c4108}
+  .back{display:inline-block;margin-top:10px;font-size:14px;color:var(--muted);text-decoration:none}
+  footer.ft{color:var(--faint);font-size:12px;text-align:center;margin-top:30px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand"><span class="dot"></span> Nosso Caixa</div>
+  <h1>Política de Privacidade</h1>
+  <div class="meta">Última atualização: 10 de outubro de 2026 · Versão 1.0</div>
+
+  <div class="card">
+    <p>Esta Política de Privacidade descreve como o aplicativo <strong>Nosso Caixa</strong>
+    ("nós", "app") coleta, usa, armazena e protege os seus dados pessoais, em conformidade com a
+    <strong>Lei Geral de Proteção de Dados Pessoais — LGPD (Lei nº 13.709/2018)</strong> e com as
+    exigências do Google Play.</p>
+    <p>Ao usar o app, você declara ter lido e compreendido esta Política.</p>
+  </div>
+
+  <div class="card">
+    <h2>1. Quem é o responsável (Controlador)</h2>
+    <p>O controlador dos dados pessoais tratados pelo app é <strong>MeuControleFinanceiro</strong>
+    (pessoa física).</p>
+    <p><strong>Encarregado (DPO):</strong> MeuControleFinanceiro — contato
+    <strong>helio.silva315@gmail.com</strong>.</p>
+  </div>
+
+  <div class="card">
+    <h2>2. Quais dados tratamos</h2>
+    <ul>
+      <li><strong>Dados de conta:</strong> e-mail e senha. A senha é armazenada cifrada pelo
+      provedor de autenticação e nunca temos acesso a ela em texto.</li>
+      <li><strong>Dados financeiros:</strong> lançamentos, dívidas, contas a pagar, valores a
+      receber e orçamentos. Ficam no seu aparelho. Se você usar a sincronização, são transmitidos
+      <strong>cifrados ponta-a-ponta</strong> (AES-256-GCM); se usar o backup na nuvem (premium),
+      ficam armazenados <strong>cifrados</strong> no provedor. Nem nós nem o servidor conseguimos
+      ler o conteúdo.</li>
+      <li><strong>Dados de assinatura (premium):</strong> identificador e status da assinatura.
+      <strong>Não armazenamos dados de cartão</strong> — o pagamento é processado pela Stripe
+      (web) ou pelo Google Play (Android).</li>
+      <li><strong>Avisos de vencimento:</strong> o agendamento ocorre no próprio aparelho para
+      exibir notificações.</li>
+      <li><strong>Sem rastreamento:</strong> não usamos cookies de publicidade, analytics ou
+      rastreadores de terceiros.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>3. Para que usamos e base legal (LGPD)</h2>
+    <ul>
+      <li><strong>Criar e manter sua conta</strong> e autenticar o acesso — execução de contrato
+      (art. 7º, V).</li>
+      <li><strong>Funcionar o app</strong> (guardar/mostrar lançamentos, sincronizar, backup) —
+      execução de contrato (art. 7º, V).</li>
+      <li><strong>Gerenciar a assinatura premium</strong> — execução de contrato e cumprimento de
+      obrigação legal/fiscal (art. 7º, II e V).</li>
+      <li><strong>Enviar avisos de vencimento</strong> — consentimento (art. 7º, I), revogável a
+      qualquer momento.</li>
+      <li><strong>Segurança e prevenção a fraudes</strong> — legítimo interesse (art. 7º, IX).</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>4. Criptografia (ponta a ponta)</h2>
+    <p>Antes de sair do seu aparelho, os dados financeiros são cifrados com
+    <strong>AES-256-GCM</strong>, usando uma chave derivada do seu "código do casal"
+    (PBKDF2/SHA-256, 120.000 iterações). A <strong>chave não é enviada aos servidores</strong>.
+    Por isso:</p>
+    <ul>
+      <li>Provedores e intermediários veem apenas dados ilegíveis (ciphertext).</li>
+      <li>Quem possuir o código consegue ler os dados — guarde-o com segurança.</li>
+      <li>Se você perder o código, não é possível recuperar o conteúdo cifrado.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>5. Com quem compartilhamos (subprocessadores)</h2>
+    <p>Não vendemos seus dados. Usamos provedores que atuam como operadores:</p>
+    <ul>
+      <li><strong>Supabase</strong> — autenticação, banco de dados e backup na nuvem.</li>
+      <li><strong>Netlify</strong> — hospedagem do site/app.</li>
+      <li><strong>Brokers MQTT (EMQX/HiveMQ)</strong> — apenas para transportar dados já
+      cifrados usados na sincronização.</li>
+      <li><strong>Stripe</strong> — pagamentos pela web.</li>
+      <li><strong>Google (Play)</strong> — distribuição no Android, pagamentos e notificações.</li>
+    </ul>
+    <p>Também podemos compartilhar dados se exigido por lei ou por autoridade competente.</p>
+  </div>
+
+  <div class="card">
+    <h2>6. Transferência internacional</h2>
+    <p>Alguns provedores podem processar dados em servidores fora do Brasil. Nesses casos,
+    adotamos medidas contratuais e técnicas para proteger seus dados, conforme a LGPD.</p>
+  </div>
+
+  <div class="card">
+    <h2>7. Por quanto tempo guardamos</h2>
+    <p>Mantemos os dados enquanto sua conta existir. O backup na nuvem é excluído quando você
+    apaga a conta. Dados fiscais/de pagamento podem ser retidos pelos prazos legais aplicáveis.</p>
+  </div>
+
+  <div class="card">
+    <h2>8. Segurança</h2>
+    <p>Adotamos medidas técnicas e administrativas (art. 46 da LGPD): criptografia AES-256-GCM,
+    HTTPS/TLS, controle de acesso por linha (RLS) e separação de chaves. Nenhum sistema é
+    infalível; comunicaremos incidentes relevantes conforme a lei.</p>
+  </div>
+
+  <div class="card">
+    <h2>9. Seus direitos e exclusão de conta</h2>
+    <p>Conforme o art. 18 da LGPD, você pode confirmar o tratamento, acessar, corrigir,
+    solicitar portabilidade, eliminar dados e revogar o consentimento.</p>
+    <p><strong>Excluir sua conta:</strong> no app, vá em <em>Ajustes → Conta e backup na nuvem →
+    Excluir minha conta</em>, ou acesse a página <a href="./excluir-conta.html">Exclusão de Conta</a>.
+    A exclusão remove sua conta e os dados vinculados na nuvem (incluindo o backup cifrado).</p>
+    <p>Você também pode exercer seus direitos pelo e-mail <strong>helio.silva315@gmail.com</strong>.</p>
+  </div>
+
+  <div class="card">
+    <h2>10. Notificações</h2>
+    <p>Os avisos de vencimento são gerados pelo próprio app no seu aparelho e podem ser
+    desativados a qualquer momento nas configurações.</p>
+  </div>
+
+  <div class="card">
+    <h2>11. Crianças e adolescentes</h2>
+    <p>O app não é destinado a menores de 18 anos e não coletamos intencionalmente dados de
+    crianças ou adolescentes.</p>
+  </div>
+
+  <div class="card">
+    <h2>12. Alterações desta Política</h2>
+    <p>Podemos atualizar esta Política. A versão vigente estará sempre nesta página, com a data
+    de "Última atualização". Mudanças relevantes serão comunicadas no app.</p>
+  </div>
+
+  <div class="card">
+    <h2>13. Contato</h2>
+    <p>Dúvidas sobre privacidade: <strong>helio.silva315@gmail.com</strong>.</p>
+    <p>Você também pode peticionar à Autoridade Nacional de Proteção de Dados (ANPD):
+    <a href="https://www.gov.br/anpd" target="_blank" rel="noopener">www.gov.br/anpd</a>.</p>
+    <a class="back" href="./index.html">← Voltar ao app</a> · <a class="back" href="./termos.html">Termos de Uso</a>
+  </div>
+
+  <footer class="ft">Nosso Caixa · Política de Privacidade</footer>
+</div>
+</body>
+</html>

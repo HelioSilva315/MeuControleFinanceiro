@@ -11,6 +11,7 @@ supabase/
   .env.example                     # variáveis/segredos que você vai definir
   functions/
     entitlement/index.ts           # o app pergunta "sou premium?"
+    delete-account/index.ts        # apaga a conta do usuário (LGPD / Play)
     stripe-webhook/index.ts        # Stripe avisa pagamento -> grava premium
     google-play-verify/index.ts    # valida a compra do Play e grava premium
     google-play-rtdn/index.ts      # Google avisa renovação/cancelamento
@@ -68,6 +69,19 @@ O `schema.sql` já vem com dois e-mails de exemplo cadastrados
 os seus. Depois de criar a conta no app e entrar, o premium aparece sozinho (o
 app confere pelo `/entitlement`).
 
+## 2d. Privacidade e exclusão de conta (LGPD / Google Play)
+
+Os documentos públicos ficam na raiz do site, como arquivos estáticos servidos pelo
+host: `privacidade.html`, `termos.html` e `excluir-conta.html`.
+
+- Use estas URLs no formulário da Play Console:
+  - **Política de Privacidade:** `https://SEU_DOMINIO/privacidade.html`
+  - **Exclusão de conta:** `https://SEU_DOMINIO/excluir-conta.html`
+- O botão **Excluir minha conta** (Ajustes → Conta e backup na nuvem) chama a
+  função `delete-account`, que remove a conta e os dados na nuvem (backup
+  cifrado). Se o usuário for dono de um casal que ainda tem outro membro, a
+  titularidade é transferida para esse membro em vez de apagar a família.
+
 ## 3. Publicar as funções
 
 Instale a CLI e faça deploy:
@@ -77,6 +91,7 @@ npm install -g supabase
 supabase login
 supabase link --project-ref SEU_PROJECT_REF
 supabase functions deploy entitlement
+supabase functions deploy delete-account
 supabase functions deploy stripe-webhook --no-verify-jwt
 supabase functions deploy google-play-verify
 supabase functions deploy google-play-rtdn --no-verify-jwt

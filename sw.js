@@ -1,8 +1,11 @@
-const CACHE = "nosso-caixa-v14";
+const CACHE = "nosso-caixa-v15";
 const ASSETS = [
   "./",
   "./index.html",
   "./manifest.json",
+  "./privacidade.html",
+  "./termos.html",
+  "./excluir-conta.html",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/icon-maskable-512.png",
@@ -39,10 +42,10 @@ self.addEventListener("fetch", (event) => {
       fetch(req)
         .then((res) => {
           const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put("./index.html", copy)).catch(() => {});
+          caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
           return res;
         })
-        .catch(() => caches.match("./index.html"))
+        .catch(() => caches.match(req).then((hit) => hit || caches.match("./index.html")))
     );
     return;
   }
