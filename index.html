@@ -142,8 +142,8 @@
   .panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
   .panel-head h2{font-size:13.5px;font-weight:650;letter-spacing:-.005em}
   .panel-head .hint{font-size:11.5px;color:var(--faint)}
-  .tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;background:var(--surface-2);padding:5px;border-radius:14px;border:1px solid var(--line);margin-bottom:14px}
-  .tabs button{padding:10px 4px;border-radius:10px;font-size:12.5px;font-weight:600;color:var(--muted);transition:.18s}
+  .tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;background:var(--surface-2);padding:5px;border-radius:14px;border:1px solid var(--line);margin-bottom:14px}
+  .tabs button{padding:10px 2px;border-radius:10px;font-size:11.5px;font-weight:600;color:var(--muted);transition:.18s}
   .tabs button.active{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(16,24,40,.12)}
   .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .stat{background:var(--surface-2);border:1px solid var(--line);border-radius:14px;padding:12px 14px;min-width:0}
@@ -445,6 +445,7 @@
     <button id="tabExtrato" type="button">Extrato</button>
     <button id="tabDividas" type="button">Dívidas</button>
     <button id="tabReceber" type="button">A Receber</button>
+    <button id="tabPagar" type="button">A Pagar</button>
   </div>
 
   <section id="viewResumo">
@@ -550,9 +551,27 @@
     </div>
     <div id="receberList"></div>
   </section>
+
+  <section id="viewPagar" hidden>
+    <div class="debt-toolbar">
+      <div>
+        <div class="debt-total-label">A pagar</div>
+        <div class="debt-total num" id="pagarTotal">R$ 0,00</div>
+      </div>
+      <button class="btn btn-primary" id="newPagarBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+        Nova conta
+      </button>
+    </div>
+    <div class="list-head">
+      <h2>Contas a pagar</h2>
+      <span class="hint" id="pagarCount">—</span>
+    </div>
+    <div id="pagarList"></div>
+  </section>
 </div>
 
-<footer class="verbar">Nosso Caixa · versão <b id="verMark">v9</b></footer>
+<footer class="verbar">Nosso Caixa · versão <b id="verMark">v10</b></footer>
 
 <button class="fab" id="fab">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
@@ -746,6 +765,69 @@
   </form>
 </div>
 
+<!-- Conta a pagar sheet -->
+<div class="sheet" id="pagarSheet" role="dialog" aria-modal="true" aria-labelledby="pagarTitle">
+  <div class="grip"></div>
+  <div class="sheet-head">
+    <h2 id="pagarTitle">Nova conta a pagar</h2>
+    <button class="close" data-close aria-label="Fechar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    </button>
+  </div>
+  <form id="pagarForm">
+    <div class="field">
+      <label for="pagarDesc">Descrição</label>
+      <input class="input" id="pagarDesc" maxlength="60" autocomplete="off" placeholder="Ex.: Luz, internet, aluguel, fornecedor">
+    </div>
+
+    <div class="field">
+      <label for="pagarValor" id="pagarValorLabel">Valor total</label>
+      <div class="value-field">
+        <span class="cur">R$</span>
+        <input id="pagarValor" inputmode="decimal" autocomplete="off" placeholder="0,00" required>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="pagarQuem">Para quem</label>
+      <input class="input" id="pagarQuem" maxlength="40" autocomplete="off" placeholder="Ex.: Enel, Vivo (opcional)">
+    </div>
+
+    <div class="field">
+      <label for="pagarData" id="pagarDataLabel">Vencimento</label>
+      <input class="input num" type="date" id="pagarData">
+    </div>
+
+    <div class="field">
+      <label>Repetição</label>
+      <div class="seg seg3">
+        <label><input type="radio" name="pagarRecorrencia" value="" checked><span>Não repete</span></label>
+        <label><input type="radio" name="pagarRecorrencia" value="mensal"><span>Mensal</span></label>
+        <label><input type="radio" name="pagarRecorrencia" value="semanal"><span>Semanal</span></label>
+      </div>
+    </div>
+
+    <div class="field" id="pagarFimField" hidden>
+      <label for="pagarFim">Repetir até (opcional)</label>
+      <input class="input num" type="date" id="pagarFim">
+    </div>
+
+    <div class="field" id="pagarParcelasField">
+      <label for="pagarParcelas">Nº de parcelas</label>
+      <input class="input num" id="pagarParcelas" inputmode="numeric" autocomplete="off" placeholder="Ex.: 1" value="1">
+    </div>
+
+    <div class="field">
+      <label>Categoria</label>
+      <div class="cats" id="pagarCats"></div>
+    </div>
+
+    <div class="row-actions" id="pagarActions">
+      <button type="submit" class="btn btn-primary btn-block" id="pagarSaveBtn">Salvar conta</button>
+    </div>
+  </form>
+</div>
+
 <!-- Settings sheet -->
 <div class="sheet" id="settingsSheet" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
   <div class="grip"></div>
@@ -913,6 +995,7 @@
     transacoes: [],
     dividas: [],
     recebiveis: [],
+    contas: [],
     categorias: [],
     view: { y: 0, m: 0 },
     query: "",
@@ -921,7 +1004,10 @@
     formDividaId: null,
     editingRecvId: null,
     formRecebivelId: null,
-    formRecebivelPeriodo: null
+    formRecebivelPeriodo: null,
+    editingContaId: null,
+    formContaId: null,
+    formContaPeriodo: null
   };
   var now = new Date();
   state.view.y = now.getFullYear();
@@ -976,7 +1062,7 @@
 
   /* ---------------- Persistência ---------------- */
   function snapshot() {
-    return { v: 3, transacoes: state.transacoes, dividas: state.dividas, categorias: state.categorias, recebiveis: state.recebiveis };
+    return { v: 3, transacoes: state.transacoes, dividas: state.dividas, categorias: state.categorias, recebiveis: state.recebiveis, contas: state.contas };
   }
   function save() {
     try { localStorage.setItem(KEY, JSON.stringify(snapshot())); } catch (e) {}
@@ -984,11 +1070,12 @@
   }
   function pruneTombstones() {
     var limit = Date.now() - 120 * 24 * 60 * 60 * 1000;
-    var before = state.transacoes.length + state.dividas.length + state.recebiveis.length;
+    var before = state.transacoes.length + state.dividas.length + state.recebiveis.length + state.contas.length;
     state.transacoes = state.transacoes.filter(function (t) { return !t.deleted || (t.updatedAt || 0) > limit; });
     state.dividas = state.dividas.filter(function (d) { return !d.deleted || (d.updatedAt || 0) > limit; });
     state.recebiveis = state.recebiveis.filter(function (r) { return !r.deleted || (r.updatedAt || 0) > limit; });
-    return (state.transacoes.length + state.dividas.length + state.recebiveis.length) !== before;
+    state.contas = state.contas.filter(function (c) { return !c.deleted || (c.updatedAt || 0) > limit; });
+    return (state.transacoes.length + state.dividas.length + state.recebiveis.length + state.contas.length) !== before;
   }
   function normalize(list) {
     if (!Array.isArray(list)) return [];
@@ -1003,6 +1090,7 @@
         data: /^\d{4}-\d{2}-\d{2}$/.test(t.data) ? t.data : todayISO(),
         dividaId: t.dividaId ? String(t.dividaId) : null,
         recebivelId: t.recebivelId ? String(t.recebivelId) : null,
+        contaId: t.contaId ? String(t.contaId) : null,
         periodo: t.periodo ? String(t.periodo) : null,
         criadoEm: criadoEm,
         updatedAt: Number(t.updatedAt) || criadoEm,
@@ -1045,6 +1133,26 @@
         deleted: !!r.deleted
       };
     }).filter(function (r) { return r.valorTotal > 0 || r.deleted; });
+  }
+  function normalizeContas(list) {
+    if (!Array.isArray(list)) return [];
+    return list.filter(function (c0) { return c0 && typeof c0 === "object"; }).map(function (c0) {
+      var criadoEm = Number(c0.criadoEm) || Date.now();
+      return {
+        id: c0.id ? String(c0.id) : uid(),
+        descricao: typeof c0.descricao === "string" ? c0.descricao.slice(0, 60) : "",
+        valorTotal: Math.abs(Number(c0.valorTotal)) || 0,
+        quemRecebe: typeof c0.quemRecebe === "string" ? c0.quemRecebe.slice(0, 40) : "",
+        vencimento: /^\d{4}-\d{2}-\d{2}$/.test(c0.vencimento) ? c0.vencimento : "",
+        recorrencia: (c0.recorrencia === "mensal" || c0.recorrencia === "semanal") ? c0.recorrencia : "",
+        recorrenciaFim: /^\d{4}-\d{2}-\d{2}$/.test(c0.recorrenciaFim) ? c0.recorrenciaFim : "",
+        parcelas: Math.max(1, Math.round(Number(c0.parcelas) || 1)),
+        categoria: CAT[c0.categoria] ? c0.categoria : "outros",
+        criadoEm: criadoEm,
+        updatedAt: Number(c0.updatedAt) || criadoEm,
+        deleted: !!c0.deleted
+      };
+    }).filter(function (c0) { return c0.valorTotal > 0 || c0.deleted; });
   }
   function normalizeCats(list) {
     if (!Array.isArray(list)) return [];
@@ -1097,12 +1205,14 @@
           state.transacoes = normalize(parsed);
           state.dividas = [];
           state.recebiveis = [];
+          state.contas = [];
         } else if (parsed && typeof parsed === "object") {
           state.categorias = normalizeCats(parsed.categorias);
           rebuildCatIndex();
           state.transacoes = normalize(parsed.transacoes);
           state.dividas = normalizeDebts(parsed.dividas);
           state.recebiveis = normalizeRecebiveis(parsed.recebiveis);
+          state.contas = normalizeContas(parsed.contas);
         }
         return;
       }
@@ -1113,10 +1223,11 @@
         state.transacoes = normalize(migrateOld(JSON.parse(old)));
         state.dividas = [];
         state.recebiveis = [];
+        state.contas = [];
         save();
         localStorage.removeItem(OLD_KEY);
       }
-    } catch (e) { state.categorias = []; rebuildCatIndex(); state.transacoes = []; state.dividas = []; state.recebiveis = []; }
+    } catch (e) { state.categorias = []; rebuildCatIndex(); state.transacoes = []; state.dividas = []; state.recebiveis = []; state.contas = []; }
   }
 
   /* ---------------- Cálculos ---------------- */
@@ -1183,34 +1294,34 @@
     }
     return new Date(ref.getFullYear(), ref.getMonth() + 1, 0);
   }
-  function recvOcorrencias(r) {
-    if (!recvRecorrente(r)) return [{ due: r.dataPrevista || "", valor: r.valorTotal, key: r.dataPrevista || "" }];
-    var start = r.dataPrevista ? isoToDate(r.dataPrevista) : new Date();
-    var limite = recvFimPeriodo(r.recorrencia, new Date());
-    if (r.recorrenciaFim) { var fim = isoToDate(r.recorrenciaFim); if (fim < limite) limite = fim; }
+  function schedOcorrencias(item, dateField) {
+    if (!recvRecorrente(item)) return [{ due: item[dateField] || "", valor: item.valorTotal, key: item[dateField] || "" }];
+    var start = item[dateField] ? isoToDate(item[dateField]) : new Date();
+    var limite = recvFimPeriodo(item.recorrencia, new Date());
+    if (item.recorrenciaFim) { var fim = isoToDate(item.recorrenciaFim); if (fim < limite) limite = fim; }
     var out = [], d = start, guard = 0;
     while (d <= limite && guard < 2000) {
       var iso = isoFromDate(d);
-      out.push({ due: iso, valor: r.valorTotal, key: iso });
-      d = recvAddIntervalo(d, r.recorrencia);
+      out.push({ due: iso, valor: item.valorTotal, key: iso });
+      d = recvAddIntervalo(d, item.recorrencia);
       guard++;
     }
     return out;
   }
-  function recvProxima(r) {
-    if (!recvRecorrente(r)) return null;
-    var start = r.dataPrevista ? isoToDate(r.dataPrevista) : new Date();
-    var limite = recvFimPeriodo(r.recorrencia, new Date());
+  function schedProxima(item, dateField) {
+    if (!recvRecorrente(item)) return null;
+    var start = item[dateField] ? isoToDate(item[dateField]) : new Date();
+    var limite = recvFimPeriodo(item.recorrencia, new Date());
     var d = start, guard = 0;
-    while (d <= limite && guard < 2000) { d = recvAddIntervalo(d, r.recorrencia); guard++; }
-    if (r.recorrenciaFim && isoFromDate(d) > r.recorrenciaFim) return null;
+    while (d <= limite && guard < 2000) { d = recvAddIntervalo(d, item.recorrencia); guard++; }
+    if (item.recorrenciaFim && isoFromDate(d) > item.recorrenciaFim) return null;
     return isoFromDate(d);
   }
-  function recvReceivedMap(r) {
-    var occ = recvOcorrencias(r);
+  function schedReceivedMap(item, linkField, dateField, tipo) {
+    var occ = schedOcorrencias(item, dateField);
     var map = {}, legacy = 0;
     state.transacoes.forEach(function (t) {
-      if (t.deleted || t.recebivelId !== r.id || t.tipo !== "entrada") return;
+      if (t.deleted || t[linkField] !== item.id || t.tipo !== tipo) return;
       if (t.periodo) map[t.periodo] = (map[t.periodo] || 0) + t.valor;
       else legacy += t.valor;
     });
@@ -1221,14 +1332,27 @@
     }
     return { occ: occ, map: map };
   }
-  function recvPendentes(r) {
-    var info = recvReceivedMap(r);
+  function schedPendentes(item, linkField, dateField, tipo) {
+    var info = schedReceivedMap(item, linkField, dateField, tipo);
     return info.occ.filter(function (o) { return (info.map[o.key] || 0) < o.valor - 0.005; });
   }
-  function recvTotalPendente(r) {
-    var info = recvReceivedMap(r);
+  function schedTotalPendente(item, linkField, dateField, tipo) {
+    var info = schedReceivedMap(item, linkField, dateField, tipo);
     return info.occ.reduce(function (s, o) { return s + Math.max(0, o.valor - (info.map[o.key] || 0)); }, 0);
   }
+  function schedCompetencia(item, key) {
+    if (!key) return "";
+    if (item.recorrencia === "semanal") return "semana " + fmtDateShort(key);
+    var p = String(key).split("-");
+    if (p.length !== 3) return fmtDateShort(key);
+    return monthTitle(+p[0], +p[1] - 1).toLowerCase() + "/" + p[0].slice(2);
+  }
+
+  function recvOcorrencias(r) { return schedOcorrencias(r, "dataPrevista"); }
+  function recvProxima(r) { return schedProxima(r, "dataPrevista"); }
+  function recvReceivedMap(r) { return schedReceivedMap(r, "recebivelId", "dataPrevista", "entrada"); }
+  function recvPendentes(r) { return schedPendentes(r, "recebivelId", "dataPrevista", "entrada"); }
+  function recvTotalPendente(r) { return schedTotalPendente(r, "recebivelId", "dataPrevista", "entrada"); }
   function recvRemaining(r) {
     if (recvRecorrente(r)) return recvTotalPendente(r);
     return Math.max(0, r.valorTotal - recvReceived(r.id));
@@ -1252,13 +1376,46 @@
   }
   function recvFreqLabel(rec) { return rec === "semanal" ? "Semanal" : "Mensal"; }
   function recvPerLabel(rec) { return rec === "semanal" ? "por semana" : "por mês"; }
-  function recvCompetencia(r, key) {
-    if (!key) return "";
-    if (r.recorrencia === "semanal") return "semana " + fmtDateShort(key);
-    var p = String(key).split("-");
-    if (p.length !== 3) return fmtDateShort(key);
-    return monthTitle(+p[0], +p[1] - 1).toLowerCase() + "/" + p[0].slice(2);
+  function recvCompetencia(r, key) { return schedCompetencia(r, key); }
+
+  /* ---------------- A Pagar ---------------- */
+  function contaById(id) {
+    for (var i = 0; i < state.contas.length; i++) if (state.contas[i].id === id) return state.contas[i];
+    return null;
   }
+  function contaPaid(id) {
+    return state.transacoes.reduce(function (s, t) {
+      if (t.deleted || t.contaId !== id || t.tipo !== "saida") return s;
+      return s + t.valor;
+    }, 0);
+  }
+  function contaOcorrencias(p) { return schedOcorrencias(p, "vencimento"); }
+  function contaProxima(p) { return schedProxima(p, "vencimento"); }
+  function contaReceivedMap(p) { return schedReceivedMap(p, "contaId", "vencimento", "saida"); }
+  function contaPendentes(p) { return schedPendentes(p, "contaId", "vencimento", "saida"); }
+  function contaTotalPendente(p) { return schedTotalPendente(p, "contaId", "vencimento", "saida"); }
+  function contaRemaining(p) {
+    if (recvRecorrente(p)) return contaTotalPendente(p);
+    return Math.max(0, p.valorTotal - contaPaid(p.id));
+  }
+  function activeContas() {
+    return state.contas.filter(function (c) { return !c.deleted; })
+      .sort(function (a, b) { return (b.criadoEm || 0) - (a.criadoEm || 0); });
+  }
+  function suggestContaValor(p) {
+    var rest = contaRemaining(p);
+    if (p.parcelas > 1) return Math.min(rest, p.valorTotal / p.parcelas);
+    return rest;
+  }
+  function contaOverdue(p) {
+    if (recvRecorrente(p)) {
+      var info = contaReceivedMap(p), hoje = todayISO();
+      return info.occ.some(function (o) { return (info.map[o.key] || 0) < o.valor - 0.005 && o.due < hoje; });
+    }
+    if (!p.vencimento) return false;
+    return contaRemaining(p) > 0 && p.vencimento < todayISO();
+  }
+  function contaCompetencia(p, key) { return schedCompetencia(p, key); }
 
   /* ---------------- Render ---------------- */
   var $ = function (id) { return document.getElementById(id); };
@@ -1534,8 +1691,9 @@
           '</span>';
         var dv = t.dividaId ? debtById(t.dividaId) : null;
         var rv = t.recebivelId ? recvById(t.recebivelId) : null;
+        var cv = t.contaId ? contaById(t.contaId) : null;
         row.querySelector(".tx-title").textContent = t.descricao || c.label;
-        row.querySelector(".tx-meta").textContent = (dv ? "Parcela \u00b7 " : "") + (rv ? "Recebimento" + (t.periodo ? " " + fmtDateShort(t.periodo) : "") + " \u00b7 " : "") + c.label;
+        row.querySelector(".tx-meta").textContent = (dv ? "Parcela \u00b7 " : "") + (rv ? "Recebimento" + (t.periodo ? " " + fmtDateShort(t.periodo) : "") + " \u00b7 " : "") + (cv ? "Pagamento" + (t.periodo ? " " + fmtDateShort(t.periodo) : "") + " \u00b7 " : "") + c.label;
         var amt = row.querySelector(".tx-amt");
         amt.classList.add(t.tipo === "entrada" ? "in" : "out");
         amt.textContent = (t.tipo === "entrada" ? "+ " : "\u2212 ") + fmtBRL(t.valor);
@@ -1658,6 +1816,114 @@
     });
   }
 
+  function renderPagar() {
+    var wrap = $("pagarList");
+    var list = activeContas();
+    var totalRest = list.reduce(function (s, p) { return s + contaRemaining(p); }, 0);
+    $("pagarTotal").textContent = fmtBRL(totalRest);
+    $("pagarCount").textContent = list.length + (list.length === 1 ? " cadastrada" : " cadastradas");
+    wrap.innerHTML = "";
+
+    if (!list.length) {
+      var empty = document.createElement("div");
+      empty.className = "empty";
+      empty.innerHTML =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M3 7V5a2 2 0 0 1 2-2h11l3 4"/><path d="M16 12h.01"/></svg>' +
+        '<p>Nenhuma conta a pagar. Cadastre para acompanhar os vencimentos.</p>';
+      wrap.appendChild(empty);
+      return;
+    }
+
+    list.forEach(function (p) {
+      var c = CAT[p.categoria] || CAT.outros;
+      var rec = recvRecorrente(p);
+      var overdue = contaOverdue(p);
+      var nome = p.descricao || c.label;
+      var done, rest, pct, footText, restSmall, badgeText = "";
+      var btnText = "Pagar";
+      var subParts = [];
+      if (p.quemRecebe) subParts.push(p.quemRecebe);
+      subParts.push(c.label);
+
+      if (rec) {
+        var info = contaReceivedMap(p);
+        var pend = info.occ.filter(function (o) { return (info.map[o.key] || 0) < o.valor - 0.005; });
+        var pago = info.occ.reduce(function (s, o) { return s + Math.min(info.map[o.key] || 0, o.valor); }, 0);
+        rest = pend.reduce(function (s, o) { return s + (o.valor - (info.map[o.key] || 0)); }, 0);
+        done = pend.length === 0;
+        pct = (pago + rest) > 0 ? Math.min(100, (pago / (pago + rest)) * 100) : 100;
+        subParts.push(recvFreqLabel(p.recorrencia) + " \u00b7 " + fmtBRL(p.valorTotal) + " " + recvPerLabel(p.recorrencia));
+        if (p.recorrenciaFim) subParts.push("at\u00e9 " + fmtDateShort(p.recorrenciaFim));
+        var pagosN = info.occ.length - pend.length;
+        footText = "Pago " + fmtBRL(pago) + " em " + pagosN + (pagosN === 1 ? " per\u00edodo" : " per\u00edodos");
+        restSmall = done ? (info.occ.length === 0 ? "a come\u00e7ar" : "em dia") : (overdue ? "atrasado" : "a pagar");
+        if (done) {
+          var prox = contaProxima(p);
+          if (prox) { btnText = "Pagar " + contaCompetencia(p, prox); badgeText = "Em dia"; }
+          else { badgeText = "Conclu\u00eddo"; }
+        } else {
+          btnText = "Pagar " + contaCompetencia(p, pend[0].key);
+        }
+      } else {
+        var pagoP = contaPaid(p.id);
+        rest = Math.max(0, p.valorTotal - pagoP);
+        done = rest <= 0;
+        pct = p.valorTotal > 0 ? Math.min(100, (pagoP / p.valorTotal) * 100) : 100;
+        if (p.vencimento) subParts.push(fmtDateShort(p.vencimento));
+        footText = "Pago " + fmtBRL(pagoP) + " de " + fmtBRL(p.valorTotal);
+        restSmall = done ? "pago" : (overdue ? "atrasado" : "a pagar");
+        if (done) badgeText = "Conta quitada";
+      }
+
+      var card = document.createElement("div");
+      card.className = "debt" + (done ? " done" : "") + (overdue ? " overdue" : "");
+      card.innerHTML =
+        '<div class="debt-top">' +
+          '<div><div class="debt-name"></div><div class="debt-sub"></div></div>' +
+          '<div class="debt-rest"><b class="num"></b><small></small></div>' +
+        '</div>' +
+        '<div class="debt-track"><div class="debt-fill"></div></div>' +
+        '<div class="debt-foot"><span class="debt-pago num"></span><span class="debt-pct num"></span></div>' +
+        '<div class="debt-actions"></div>';
+      card.querySelector(".debt-name").textContent = nome;
+      card.querySelector(".debt-sub").textContent = subParts.join(" \u00b7 ");
+      card.querySelector(".debt-rest b").textContent = fmtBRL(rest);
+      card.querySelector(".debt-rest small").textContent = restSmall;
+      card.querySelector(".debt-pago").textContent = footText;
+      card.querySelector(".debt-pct").textContent = Math.round(pct) + "%";
+      var fill = card.querySelector(".debt-fill");
+      requestAnimationFrame(function () { fill.style.width = pct + "%"; });
+
+      var actions = card.querySelector(".debt-actions");
+      if (done) {
+        var badge = document.createElement("div");
+        badge.className = "debt-done-badge";
+        badge.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> ' + badgeText;
+        card.insertBefore(badge, actions);
+        if (rec && badgeText === "Em dia") {
+          var advBtn = document.createElement("button");
+          advBtn.className = "btn btn-primary";
+          advBtn.textContent = btnText;
+          advBtn.addEventListener("click", function () { payConta(p); });
+          actions.appendChild(advBtn);
+        }
+      } else {
+        var payBtn = document.createElement("button");
+        payBtn.className = "btn btn-primary";
+        payBtn.textContent = btnText;
+        payBtn.addEventListener("click", function () { payConta(p); });
+        actions.appendChild(payBtn);
+      }
+      var editBtn = document.createElement("button");
+      editBtn.className = "btn btn-ghost";
+      editBtn.textContent = "Editar";
+      editBtn.addEventListener("click", function () { openPagarForm(p); });
+      actions.appendChild(editBtn);
+
+      wrap.appendChild(card);
+    });
+  }
+
   function render() {
     var md = monthData(state.view.y, state.view.m);
     renderMonth();
@@ -1666,6 +1932,7 @@
     renderList(md);
     renderDividas();
     renderReceber();
+    renderPagar();
   }
 
   /* ---------------- Sheets ---------------- */
@@ -1715,14 +1982,17 @@
     var prevRecv = selectedRadio("recvCategoria");
     catsWrap.innerHTML = "";
     $("debtCats").innerHTML = "";
+    var prevPagar = selectedRadio("pagarCategoria");
     $("recvCats").innerHTML = "";
     var list = activeCats();
     buildCatsInto(catsWrap, "categoria", list);
     buildCatsInto($("debtCats"), "debtCategoria", list);
     buildCatsInto($("recvCats"), "recvCategoria", list);
+    buildCatsInto($("pagarCats"), "pagarCategoria", list);
     if (prevCat) setCategoria(prevCat);
     if (prevDebt) setRadio("debtCategoria", prevDebt);
     if (prevRecv) setRadio("recvCategoria", prevRecv);
+    if (prevPagar) setRadio("pagarCategoria", prevPagar);
   }
 
   /* ---------------- Categorias personalizadas ---------------- */
@@ -1847,6 +2117,8 @@
       state.formDividaId = tx.dividaId || null;
       state.formRecebivelId = tx.recebivelId || null;
       state.formRecebivelPeriodo = tx.periodo || null;
+      state.formContaId = tx.contaId || null;
+      state.formContaPeriodo = tx.periodo || null;
       $("formTitle").textContent = "Editar lançamento";
       $("saveBtn").textContent = "Salvar alterações";
       setTipo(tx.tipo);
@@ -1871,6 +2143,8 @@
       state.formDividaId = null;
       state.formRecebivelId = null;
       state.formRecebivelPeriodo = null;
+      state.formContaId = null;
+      state.formContaPeriodo = null;
       $("formTitle").textContent = "Novo lançamento";
       $("saveBtn").textContent = "Salvar lançamento";
       setTipo("saida");
@@ -1908,20 +2182,21 @@
     var data = $("dataInput").value || todayISO();
     var dividaId = state.formDividaId || null;
     var recebivelId = state.formRecebivelId || null;
-    var periodo = state.formRecebivelPeriodo || null;
+    var contaId = state.formContaId || null;
+    var periodo = state.formRecebivelPeriodo || state.formContaPeriodo || null;
 
     if (state.editingId) {
       var tx = state.transacoes.filter(function (t) { return t.id === state.editingId; })[0];
-      if (tx) { tx.valor = valor; tx.tipo = tipo; tx.descricao = descricao; tx.categoria = categoria; tx.data = data; tx.dividaId = dividaId; tx.recebivelId = recebivelId; tx.periodo = periodo; tx.updatedAt = Date.now(); }
+      if (tx) { tx.valor = valor; tx.tipo = tipo; tx.descricao = descricao; tx.categoria = categoria; tx.data = data; tx.dividaId = dividaId; tx.recebivelId = recebivelId; tx.contaId = contaId; tx.periodo = periodo; tx.updatedAt = Date.now(); }
       toast("Lançamento atualizado");
     } else {
       var ts = Date.now();
       state.transacoes.unshift({
         id: uid(), descricao: descricao, valor: valor, tipo: tipo,
-        categoria: categoria, data: data, dividaId: dividaId, recebivelId: recebivelId, periodo: periodo,
+        categoria: categoria, data: data, dividaId: dividaId, recebivelId: recebivelId, contaId: contaId, periodo: periodo,
         criadoEm: ts, updatedAt: ts, deleted: false
       });
-      toast(recebivelId ? "Recebimento registrado" : (dividaId ? "Parcela registrada" : "Lançamento salvo"));
+      toast(recebivelId ? "Recebimento registrado" : (contaId ? "Pagamento registrado" : (dividaId ? "Parcela registrada" : "Lançamento salvo")));
     }
     save(); render(); closeSheets();
   });
@@ -2154,6 +2429,147 @@
 
   $("newRecvBtn").addEventListener("click", function () { openRecvForm(null); });
 
+  /* ---------------- A Pagar ---------------- */
+  function payConta(p) {
+    if (recvRecorrente(p)) {
+      var info = contaReceivedMap(p);
+      var pend = info.occ.filter(function (o) { return (info.map[o.key] || 0) < o.valor - 0.005; });
+      var target = pend.length ? pend[0].key : contaProxima(p);
+      if (!target) { toast("Contrato encerrado"); return; }
+      var pago = info.map[target] || 0;
+      var valorPend = Math.max(0, p.valorTotal - pago) || p.valorTotal;
+      openForm(null);
+      state.formContaId = p.id;
+      state.formContaPeriodo = target;
+      $("formTitle").textContent = "Pagar " + contaCompetencia(p, target);
+      $("saveBtn").textContent = "Registrar pagamento";
+      setTipo("saida");
+      setCategoria(p.categoria);
+      $("valor").value = valorPend.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      $("descricao").value = p.descricao || "";
+      $("dataInput").value = target;
+      var del0 = $("deleteBtn"); if (del0) del0.remove();
+      return;
+    }
+    var rest = contaRemaining(p);
+    if (rest <= 0) { toast("Conta já paga"); return; }
+    openForm(null);
+    state.formContaId = p.id;
+    $("formTitle").textContent = "Pagar conta";
+    $("saveBtn").textContent = "Registrar pagamento";
+    setTipo("saida");
+    setCategoria(p.categoria);
+    $("valor").value = suggestContaValor(p).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    $("descricao").value = p.descricao || "";
+    var del = $("deleteBtn"); if (del) del.remove();
+  }
+
+  function openPagarForm(conta) {
+    var form = $("pagarForm");
+    form.reset();
+    var actions = $("pagarActions");
+    if (conta) {
+      state.editingContaId = conta.id;
+      $("pagarTitle").textContent = "Editar conta";
+      $("pagarSaveBtn").textContent = "Salvar alterações";
+      $("pagarDesc").value = conta.descricao || "";
+      $("pagarValor").value = conta.valorTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 });
+      $("pagarQuem").value = conta.quemRecebe || "";
+      $("pagarData").value = conta.vencimento || "";
+      $("pagarParcelas").value = conta.parcelas || 1;
+      setRadio("pagarRecorrencia", conta.recorrencia || "");
+      $("pagarFim").value = conta.recorrenciaFim || "";
+      setRadio("pagarCategoria", conta.categoria);
+      actions.className = "row-actions two";
+      if (!$("pagarDeleteBtn")) {
+        var del = document.createElement("button");
+        del.type = "button";
+        del.id = "pagarDeleteBtn";
+        del.className = "btn btn-danger";
+        del.setAttribute("aria-label", "Excluir conta");
+        del.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="m19 6-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6"/></svg>';
+        del.addEventListener("click", onDeletePagar);
+        actions.appendChild(del);
+      }
+    } else {
+      state.editingContaId = null;
+      $("pagarTitle").textContent = "Nova conta a pagar";
+      $("pagarSaveBtn").textContent = "Salvar conta";
+      $("pagarParcelas").value = "1";
+      setRadio("pagarRecorrencia", "");
+      $("pagarFim").value = "";
+      setRadio("pagarCategoria", "outros");
+      var d = $("pagarDeleteBtn"); if (d) d.remove();
+      actions.className = "row-actions";
+    }
+    pagarToggleRecorr();
+    openSheet("pagarSheet");
+    setTimeout(function () { $("pagarValor").focus(); }, 320);
+  }
+
+  function pagarToggleRecorr() {
+    var rec = selectedRadio("pagarRecorrencia");
+    var isRec = rec === "mensal" || rec === "semanal";
+    $("pagarFimField").hidden = !isRec;
+    $("pagarParcelasField").hidden = isRec;
+    $("pagarValorLabel").textContent = rec === "semanal" ? "Valor por semana" : (rec === "mensal" ? "Valor por mês" : "Valor total");
+    $("pagarDataLabel").textContent = isRec ? "Primeiro vencimento" : "Vencimento";
+  }
+
+  function onDeletePagar() {
+    var id = state.editingContaId;
+    if (!id) return;
+    confirmDialog("Excluir conta", "A conta sai da lista. Os pagamentos já feitos continuam no extrato.").then(function (ok) {
+      if (!ok) return;
+      var p = contaById(id);
+      if (p) { p.deleted = true; p.updatedAt = Date.now(); }
+      pruneTombstones();
+      save(); render(); closeSheets(); toast("Conta excluída");
+    });
+  }
+
+  $("pagarForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var valor = parseValor($("pagarValor").value);
+    if (!isFinite(valor) || valor <= 0) { toast("Informe o valor da conta"); $("pagarValor").focus(); return; }
+    var descricao = $("pagarDesc").value.trim();
+    if (!descricao) { toast("Informe uma descrição"); $("pagarDesc").focus(); return; }
+    var quemRecebe = $("pagarQuem").value.trim();
+    var vencimento = /^\d{4}-\d{2}-\d{2}$/.test($("pagarData").value) ? $("pagarData").value : "";
+    var parcelas = Math.max(1, Math.round(parseValor($("pagarParcelas").value) || 1));
+    var categoria = selectedRadio("pagarCategoria");
+    var recorrencia = selectedRadio("pagarRecorrencia");
+    if (recorrencia !== "mensal" && recorrencia !== "semanal") recorrencia = "";
+    var recorrenciaFim = "";
+    if (recorrencia) {
+      if (!vencimento) vencimento = todayISO();
+      var fimRaw = $("pagarFim").value;
+      recorrenciaFim = /^\d{4}-\d{2}-\d{2}$/.test(fimRaw) ? fimRaw : "";
+      if (recorrenciaFim && recorrenciaFim < vencimento) { toast("Data final anterior ao primeiro vencimento"); $("pagarFim").focus(); return; }
+    }
+
+    if (state.editingContaId) {
+      var p = contaById(state.editingContaId);
+      if (p) { p.valorTotal = valor; p.descricao = descricao; p.quemRecebe = quemRecebe; p.vencimento = vencimento; p.parcelas = parcelas; p.categoria = categoria; p.recorrencia = recorrencia; p.recorrenciaFim = recorrenciaFim; p.updatedAt = Date.now(); }
+      toast("Conta atualizada");
+    } else {
+      var ts = Date.now();
+      state.contas.unshift({
+        id: uid(), descricao: descricao, valorTotal: valor, quemRecebe: quemRecebe, vencimento: vencimento,
+        parcelas: parcelas, categoria: categoria, recorrencia: recorrencia, recorrenciaFim: recorrenciaFim,
+        criadoEm: ts, updatedAt: ts, deleted: false
+      });
+      toast(recorrencia ? "Conta recorrente criada" : "Conta criada");
+    }
+    save(); render(); closeSheets();
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll('input[name="pagarRecorrencia"]'), function (el) {
+    el.addEventListener("change", pagarToggleRecorr);
+  });
+
+  $("newPagarBtn").addEventListener("click", function () { openPagarForm(null); });
+
   /* ---------------- Navegação de mês ---------------- */
   $("prevMonth").addEventListener("click", function () {
     state.view.m--; if (state.view.m < 0) { state.view.m = 11; state.view.y--; } render();
@@ -2240,15 +2656,16 @@
       try { data = JSON.parse(fromB64(text.trim())); }
       catch (e2) { toast("Código inválido"); return; }
     }
-    var txs, dvs, cvs, rvs;
-    if (Array.isArray(data)) { txs = data; dvs = []; cvs = []; rvs = []; }
-    else if (data && typeof data === "object") { txs = data.transacoes || []; dvs = data.dividas || []; cvs = data.categorias || []; rvs = data.recebiveis || []; }
+    var txs, dvs, cvs, rvs, pvs;
+    if (Array.isArray(data)) { txs = data; dvs = []; cvs = []; rvs = []; pvs = []; }
+    else if (data && typeof data === "object") { txs = data.transacoes || []; dvs = data.dividas || []; cvs = data.categorias || []; rvs = data.recebiveis || []; pvs = data.contas || []; }
     else { toast("Formato não reconhecido"); return; }
     var incoming = normalize(txs);
     var incomingDebts = normalizeDebts(dvs);
     var incomingCats = normalizeCats(cvs);
     var incomingRecv = normalizeRecebiveis(rvs);
-    if (!incoming.length && !incomingDebts.length && !incomingCats.length && !incomingRecv.length) { toast("Nenhum lançamento encontrado"); return; }
+    var incomingContas = normalizeContas(pvs);
+    if (!incoming.length && !incomingDebts.length && !incomingCats.length && !incomingRecv.length && !incomingContas.length) { toast("Nenhum lançamento encontrado"); return; }
     var nTx = incoming.length, nDv = incomingDebts.length;
     confirmDialog(
       "Importar dados",
@@ -2269,12 +2686,16 @@
         var rids = {}; state.recebiveis.forEach(function (r) { rids[r.id] = true; });
         var addedR = 0;
         incomingRecv.forEach(function (r) { if (!rids[r.id]) { state.recebiveis.push(r); rids[r.id] = true; addedR++; } });
-        toast((added || addedD || addedC || addedR) ? (added + addedD + addedC + addedR) + " item(ns) adicionado(s)" : "Tudo já estava atualizado");
+        var cids2 = {}; state.contas.forEach(function (c) { cids2[c.id] = true; });
+        var addedC2 = 0;
+        incomingContas.forEach(function (c) { if (!cids2[c.id]) { state.contas.push(c); cids2[c.id] = true; addedC2++; } });
+        toast((added || addedD || addedC || addedR || addedC2) ? (added + addedD + addedC + addedR + addedC2) + " item(ns) adicionado(s)" : "Tudo já estava atualizado");
       } else {
         state.transacoes = incoming;
         state.dividas = incomingDebts;
         state.categorias = incomingCats;
         state.recebiveis = incomingRecv;
+        state.contas = incomingContas;
         toast("Dados substituídos");
       }
       rebuildCatIndex(); buildCats();
@@ -2299,18 +2720,20 @@
   });
 
   $("clearBtn").addEventListener("click", function () {
-    confirmDialog("Apagar tudo", "Todos os lançamentos, dívidas e valores a receber serão removidos. Esta ação não pode ser desfeita.").then(function (ok) {
+    confirmDialog("Apagar tudo", "Todos os lançamentos, dívidas, valores a receber e contas a pagar serão removidos. Esta ação não pode ser desfeita.").then(function (ok) {
       if (!ok) return;
       if (sync && sync.enabled) {
         var ts = Date.now();
         state.transacoes.forEach(function (t) { t.deleted = true; t.updatedAt = ts; });
         state.dividas.forEach(function (d) { d.deleted = true; d.updatedAt = ts; });
         state.recebiveis.forEach(function (r) { r.deleted = true; r.updatedAt = ts; });
+        state.contas.forEach(function (c) { c.deleted = true; c.updatedAt = ts; });
         pruneTombstones();
       } else {
         state.transacoes = [];
         state.dividas = [];
         state.recebiveis = [];
+        state.contas = [];
       }
       save(); render(); closeSheets(); toast("Dados apagados");
     });
@@ -2446,7 +2869,10 @@
     var e = state.recebiveis.map(function (r) {
       return "r" + r.id + ":" + (r.updatedAt || 0) + ":" + (r.deleted ? 1 : 0);
     });
-    return a.concat(b, c, e).sort().join("|");
+    var f = state.contas.map(function (p) {
+      return "p" + p.id + ":" + (p.updatedAt || 0) + ":" + (p.deleted ? 1 : 0);
+    });
+    return a.concat(b, c, e, f).sort().join("|");
   }
   function mergeStates(msg) {
     var cvs = (!Array.isArray(msg) && msg && msg.c) || [];
@@ -2493,7 +2919,17 @@
     });
     if (rchanged) state.recebiveis = Object.keys(rmap).map(function (k) { return rmap[k]; });
 
-    return { changed: changed || dchanged || cchanged || rchanged, catsChanged: cchanged };
+    var pvs = (!Array.isArray(msg) && msg && msg.p) || [];
+    var pmap = {};
+    state.contas.forEach(function (p) { pmap[p.id] = p; });
+    var pchanged = false;
+    normalizeContas(pvs).forEach(function (p) {
+      var cur = pmap[p.id];
+      if (!cur || (p.updatedAt || 0) > (cur.updatedAt || 0)) { pmap[p.id] = p; pchanged = true; }
+    });
+    if (pchanged) state.contas = Object.keys(pmap).map(function (k) { return pmap[k]; });
+
+    return { changed: changed || dchanged || cchanged || rchanged || pchanged, catsChanged: cchanged };
   }
 
   function statusLabel(kind) {
@@ -2607,7 +3043,7 @@
     if (!targets.length) return;
     var h = stateHash();
     if (h === sync.lastSentHash) return;
-    encryptJSON({ v: 3, t: state.transacoes, d: state.dividas, c: state.categorias, r: state.recebiveis, at: Date.now() }).then(function (payload) {
+    encryptJSON({ v: 3, t: state.transacoes, d: state.dividas, c: state.categorias, r: state.recebiveis, p: state.contas, at: Date.now() }).then(function (payload) {
       targets.forEach(function (c) { try { c.publish(sync.topic, payload, { qos: 1, retain: true }); } catch (e) {} });
       sync.lastSentHash = h;
     }).catch(function () {});
@@ -2712,15 +3148,18 @@
     $("tabExtrato").classList.toggle("active", v === "extrato");
     $("tabDividas").classList.toggle("active", v === "dividas");
     $("tabReceber").classList.toggle("active", v === "receber");
+    $("tabPagar").classList.toggle("active", v === "pagar");
     $("viewResumo").hidden = v !== "resumo";
     $("viewExtrato").hidden = v !== "extrato";
     $("viewDividas").hidden = v !== "dividas";
     $("viewReceber").hidden = v !== "receber";
+    $("viewPagar").hidden = v !== "pagar";
   }
   $("tabResumo").addEventListener("click", function () { setView("resumo"); });
   $("tabExtrato").addEventListener("click", function () { setView("extrato"); });
   $("tabDividas").addEventListener("click", function () { setView("dividas"); });
   $("tabReceber").addEventListener("click", function () { setView("receber"); });
+  $("tabPagar").addEventListener("click", function () { setView("pagar"); });
 
   /* ---------------- Instalação (PWA) ---------------- */
   var deferredPrompt = null;
