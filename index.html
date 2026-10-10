@@ -845,6 +845,16 @@
   </div>
 
   <div class="set-block">
+    <div class="set-title">Avisos de vencimento</div>
+    <div class="set-desc" id="notifDesc">Receba um aviso no aparelho quando uma conta a pagar ou um valor a receber chegar na data de vencimento (e, se não resolver, um lembrete por dia até quitar).</div>
+    <div class="set-actions">
+      <button class="btn btn-primary" id="notifBtn">Ativar notificações</button>
+      <button class="btn btn-ghost" id="notifTest" hidden>Testar aviso</button>
+    </div>
+    <div class="sync-note">O aviso é gerado pelo próprio app. Para chegar sem abrir, mantenha o app aberto (ou em segundo plano no celular).</div>
+  </div>
+
+  <div class="set-block">
     <div class="set-title">Sincronização em tempo real</div>
     <div id="syncOff">
       <div class="set-desc">Ative aqui, copie o código e use o mesmo código no aparelho da sua esposa. Depois disso, tudo o que um lançar aparece no outro na hora.</div>
@@ -1013,6 +1023,14 @@
   state.view.y = now.getFullYear();
   state.view.m = now.getMonth();
 
+  /* ---------------- Notificações (estado local, não sincronizado) ---------------- */
+  var NOTIF_KEY = "nossoCaixa.notif";
+  var NOTIFIED_KEY = "nossoCaixa.notified";
+  var notifEnabled = false;
+  var notifiedMap = {};
+  try { notifEnabled = localStorage.getItem(NOTIF_KEY) === "1"; } catch (e) {}
+  try { notifiedMap = JSON.parse(localStorage.getItem(NOTIFIED_KEY) || "{}") || {}; } catch (e) { notifiedMap = {}; }
+
   /* ---------------- Utilidades ---------------- */
   function pad(n) { return n < 10 ? "0" + n : "" + n; }
   function uid() {
@@ -1067,6 +1085,7 @@
   function save() {
     try { localStorage.setItem(KEY, JSON.stringify(snapshot())); } catch (e) {}
     if (sync && sync.enabled) schedulePublish();
+    scheduleDueCheck();
   }
   function pruneTombstones() {
     var limit = Date.now() - 120 * 24 * 60 * 60 * 1000;
@@ -2606,6 +2625,7 @@
     $("storageInfo").textContent = n + (n === 1 ? " lançamento" : " lançamentos") +
       (nd ? " e " + nd + (nd === 1 ? " dívida" : " dívidas") : "") +
       (bytes ? " (~" + Math.max(1, Math.round(bytes / 1024)) + " KB)." : ".");
+    updateNotifUI();
     openSheet("settingsSheet");
   });
 
@@ -3161,6 +3181,150 @@
   $("tabReceber").addEventListener("click", function () { setView("receber"); });
   $("tabPagar").addEventListener("click", function () { setView("pagar"); });
 
+  /* ---------------- Notificações de vencimento ---------------- */
+  function notifSupported() { return typeof window.Notification !== "undefined"; }
+  function notifPermission() { return notifSupported() ? Notification.permission : "denied"; }
+  function notifActive() { return notifEnabled && notifPermission() === "granted"; }
+
+  function updateNotifUI() {
+    var btn = $("notifBtn"), test = $("notifTest"), desc = $("notifDesc");
+    if (!btn) return;
+    if (!notifSupported()) {
+      btn.textContent = "Notificações indisponíveis";
+      btn.disabled = true;
+      if (test) test.hidden = true;
+      if (desc) desc.textContent = "Este navegador não permite notificações.";
+      return;
+    }
+    var perm = Notification.permission;
+    if (notifEnabled && perm === "granted") {
+      btn.textContent = "Notificações ativadas";
+      btn.className = "btn btn-ghost";
+      if (test) test.hidden = false;
+    } else {
+      btn.textContent = perm === "denied" ? "Permissão bloqueada no navegador" : "Ativar notificações";
+      btn.className = "btn btn-primary";
+      if (test) test.hidden = true;
+    }
+  }
+
+  function enableNotif() {
+    if (!notifSupported()) { toast("Notificações indisponíveis neste navegador"); return; }
+    Notification.requestPermission().then(function (p) {
+      if (p === "granted") {
+        notifEnabled = true;
+        try { localStorage.setItem(NOTIF_KEY, "1"); } catch (e) {}
+        updateNotifUI();
+        toast("Notificações ativadas");
+        checkDueReminders();
+      } else {
+        notifEnabled = false;
+        try { localStorage.setItem(NOTIF_KEY, "0"); } catch (e) {}
+        updateNotifUI();
+        toast(p === "denied" ? "Permissão negada no navegador" : "Permissão não concedida");
+      }
+    }).catch(function () {});
+  }
+
+  function notifShow(title, body, tag) {
+    var opts = { body: body, tag: tag, icon: "./icons/icon-192.png", badge: "./icons/icon-192.png" };
+    function fallback() {
+      try {
+        var n = new Notification(title, opts);
+        n.onclick = function () { try { window.focus(); } catch (e) {} n.close(); };
+      } catch (e) {}
+    }
+    if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+      navigator.serviceWorker.ready.then(function (reg) {
+        if (reg && reg.showNotification) reg.showNotification(title, opts);
+        else fallback();
+      }).catch(fallback);
+    } else fallback();
+  }
+
+  function dueItems() {
+    var hoje = todayISO();
+    var out = [];
+    activeContas().forEach(function (p) {
+      var pend = contaPendentes(p);
+      if (!pend.length) return;
+      var first = pend[0];
+      if (!first.key || first.key > hoje) return;
+      out.push({
+        kind: "conta", id: p.id, key: first.key, valor: first.valor,
+        overdue: first.key < hoje, label: p.descricao || (CAT[p.categoria] || CAT.outros).label
+      });
+    });
+    activeRecv().forEach(function (r) {
+      var pend = recvPendentes(r);
+      if (!pend.length) return;
+      var first = pend[0];
+      if (!first.key || first.key > hoje) return;
+      out.push({
+        kind: "recv", id: r.id, key: first.key, valor: first.valor,
+        overdue: first.key < hoje, label: r.descricao || (CAT[r.categoria] || CAT.outros).label
+      });
+    });
+    return out;
+  }
+
+  function persistNotified() {
+    try { localStorage.setItem(NOTIFIED_KEY, JSON.stringify(notifiedMap)); } catch (e) {}
+  }
+
+  function checkDueReminders() {
+    if (!notifActive()) return;
+    var hoje = todayISO();
+    Object.keys(notifiedMap).forEach(function (k) { if (k.slice(-10) !== hoje) delete notifiedMap[k]; });
+    var fresh = dueItems().filter(function (it) {
+      return !notifiedMap[it.kind + ":" + it.id + ":" + it.key + ":" + hoje];
+    });
+    if (!fresh.length) { persistNotified(); return; }
+    if (fresh.length === 1) {
+      var it = fresh[0];
+      var isC = it.kind === "conta";
+      notifShow(
+        (isC ? "Conta" : "Recebível") + (it.overdue ? " atrasada" : " vence hoje"),
+        it.label + " \u00b7 " + fmtBRL(it.valor),
+        it.kind + "-" + it.id
+      );
+    } else {
+      var partes = fresh.slice(0, 3).map(function (x) {
+        return (x.kind === "conta" ? "Pagar" : "Receber") + ": " + x.label + " (" + fmtBRL(x.valor) + ")";
+      });
+      if (fresh.length > 3) partes.push("e mais " + (fresh.length - 3) + "...");
+      notifShow(fresh.length + " vencimentos para hoje", partes.join("\n"), "due-summary");
+    }
+    fresh.forEach(function (it) { notifiedMap[it.kind + ":" + it.id + ":" + it.key + ":" + hoje] = true; });
+    persistNotified();
+  }
+
+  var dueTimer = null;
+  function scheduleDueCheck() {
+    if (!notifActive()) return;
+    clearTimeout(dueTimer);
+    dueTimer = setTimeout(checkDueReminders, 1200);
+  }
+
+  $("notifBtn").addEventListener("click", function () {
+    if (notifEnabled && notifPermission() === "granted") {
+      notifEnabled = false;
+      try { localStorage.setItem(NOTIF_KEY, "0"); } catch (e) {}
+      updateNotifUI();
+      toast("Notificações desativadas");
+      return;
+    }
+    enableNotif();
+  });
+  $("notifTest").addEventListener("click", function () {
+    if (!notifActive()) { toast("Ative as notificações primeiro"); return; }
+    var itens = dueItems();
+    var corpo = itens.length
+      ? itens.slice(0, 3).map(function (x) { return (x.kind === "conta" ? "Pagar" : "Receber") + ": " + x.label + " (" + fmtBRL(x.valor) + ")"; }).join("\n")
+      : "Você verá aqui os avisos de contas e recebíveis no dia do vencimento.";
+    notifShow("Avisos do Nosso Caixa", corpo, "due-test");
+  });
+
   /* ---------------- Instalação (PWA) ---------------- */
   var deferredPrompt = null;
   function isStandalone() {
@@ -3212,7 +3376,18 @@
   render();
   initSync();
   refreshInstallUI();
+  updateNotifUI();
   $("fab").addEventListener("click", function () { openForm(null); });
+
+  if (notifActive()) {
+    setTimeout(checkDueReminders, 1500);
+    if (typeof setInterval === "function") {
+      setInterval(function () { if (document.visibilityState === "visible") checkDueReminders(); }, 15 * 60 * 1000);
+    }
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState === "visible") checkDueReminders();
+    });
+  }
 })();
 </script>
 </body>
