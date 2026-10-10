@@ -603,7 +603,7 @@
   </section>
 </div>
 
-<footer class="verbar">Nosso Caixa · versão <b id="verMark">v11</b></footer>
+<footer class="verbar">Nosso Caixa · versão <b id="verMark">v12</b></footer>
 
 <button class="fab" id="fab">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
@@ -897,6 +897,29 @@
     <button class="close" data-close aria-label="Fechar">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
     </button>
+  </div>
+
+  <div class="set-block" id="cloudBlock" hidden>
+    <div class="set-title">Conta e backup na nuvem</div>
+    <div id="cloudSignedOut">
+      <div class="set-desc">Entre para guardar o caixa na nuvem (criptografado) e liberar o premium. Usar o app e sincronizar entre vocês continua grátis.</div>
+      <input class="input" id="cloudEmail" type="email" placeholder="E-mail" autocomplete="email" autocapitalize="none" spellcheck="false">
+      <input class="input" id="cloudPass" type="password" placeholder="Senha (mínimo 6 caracteres)" autocomplete="current-password" style="margin-top:8px">
+      <div class="set-actions" style="margin-top:10px">
+        <button class="btn btn-primary" id="cloudSignIn">Entrar</button>
+        <button class="btn btn-ghost" id="cloudSignUp">Criar conta</button>
+      </div>
+      <div class="sync-note" id="cloudDesc">Seus lançamentos são cifrados no aparelho antes de subir. Nem o servidor consegue ler.</div>
+    </div>
+    <div id="cloudSignedIn" hidden>
+      <div class="sync-status"><span class="dot offline" id="cloudDot"></span><span id="cloudStatus">Conectando...</span></div>
+      <div class="set-actions" style="margin-top:12px">
+        <button class="btn btn-primary" id="cloudUpload">Enviar para a nuvem</button>
+        <button class="btn btn-ghost" id="cloudDownload">Restaurar da nuvem</button>
+        <button class="btn btn-danger" id="cloudSignOut">Sair</button>
+      </div>
+      <div class="sync-note" id="cloudNote"></div>
+    </div>
   </div>
 
   <div class="set-block" id="installBlock" hidden>
@@ -2862,6 +2885,8 @@
       (nd ? " e " + nd + (nd === 1 ? " dívida" : " dívidas") : "") +
       (bytes ? " (~" + Math.max(1, Math.round(bytes / 1024)) + " KB)." : ".");
     updateNotifUI();
+    cloudRender();
+    if (cloudConfigured() && cloud.session && cloud.session.a) cloudLoadEntitlement().then(cloudRender).catch(function () {});
     openSheet("settingsSheet");
   });
 
@@ -3432,6 +3457,259 @@
     if (document.visibilityState === "visible" && sync.enabled && !anyConnected()) connectSync();
   });
 
+  /* ---------------- Conta + backup na nuvem (Supabase) ----------------
+     Troque CLOUD_CFG.url e CLOUD_CFG.anonKey pelos dados do seu projeto
+     Supabase (Project Settings > API). Enquanto estiver com os valores de
+     exemplo, este bloco fica escondido e nada sai do aparelho. */
+  var CLOUD_CFG = {
+    url: "https://SEU-PROJETO.supabase.co",
+    anonKey: "COLE_AQUI_A_CHAVE_ANON",
+    fn: "/functions/v1"
+  };
+  var SESSION_KEY = "nossoCaixa.session";
+  var cloud = {
+    session: null, householdId: null, premium: false, until: null,
+    subs: null, email: "", loaded: false
+  };
+  var cloudBusyMap = {};
+
+  function cloudConfigured() {
+    var u = String(CLOUD_CFG.url || "").replace(/\/+$/, "");
+    var k = String(CLOUD_CFG.anonKey || "");
+    return /^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(u) &&
+      u.indexOf("SEU-PROJETO") < 0 &&
+      k.indexOf("COLE_AQUI") < 0 && k.length > 20;
+  }
+  function cloudBase() { return String(CLOUD_CFG.url).replace(/\/+$/, ""); }
+  function isEmail(v) { return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(v || "").trim()); }
+
+  function cloudLoadSession() {
+    try {
+      var raw = localStorage.getItem(SESSION_KEY);
+      if (raw) cloud.session = JSON.parse(raw);
+    } catch (e) { cloud.session = null; }
+    if (cloud.session && cloud.session.u) cloud.email = cloud.session.u.email || "";
+  }
+  function cloudSaveSession() {
+    try {
+      if (cloud.session) localStorage.setItem(SESSION_KEY, JSON.stringify(cloud.session));
+      else localStorage.removeItem(SESSION_KEY);
+    } catch (e) {}
+  }
+
+  function cloudFetch(path, opts) {
+    opts = opts || {};
+    var headers = {}, src = opts.headers || {};
+    for (var hk in src) if (src.hasOwnProperty(hk)) headers[hk] = src[hk];
+    headers["apikey"] = CLOUD_CFG.anonKey;
+    headers["Authorization"] = "Bearer " + ((cloud.session && cloud.session.a) || CLOUD_CFG.anonKey);
+    var body = opts.body;
+    if (opts.json !== undefined) { headers["Content-Type"] = "application/json"; body = JSON.stringify(opts.json); }
+    return fetch(cloudBase() + path, { method: opts.method || "GET", headers: headers, body: body }).then(function (res) {
+      return res.text().then(function (txt) {
+        var data = null;
+        try { data = txt ? JSON.parse(txt) : null; } catch (e2) { data = txt; }
+        if (!res.ok) {
+          var msg = (data && (data.msg || data.error_description || data.message || data.error || data.hint)) || ("HTTP " + res.status);
+          var err = new Error(msg); err.status = res.status; err.data = data; throw err;
+        }
+        return data;
+      });
+    });
+  }
+
+  function cloudSetSession(tok) {
+    cloud.session = {
+      a: tok.access_token,
+      r: tok.refresh_token,
+      e: Date.now() + (Number(tok.expires_in) || 3600) * 1000,
+      u: tok.user || (cloud.session && cloud.session.u) || null
+    };
+    cloud.email = (cloud.session.u && cloud.session.u.email) || cloud.email;
+    cloudSaveSession();
+  }
+  function cloudSignUp(email, password) {
+    return cloudFetch("/auth/v1/signup", { method: "POST", json: { email: email, password: password } }).then(function (data) {
+      if (data && data.access_token) { cloudSetSession(data); return { session: true }; }
+      return { session: false, data: data };
+    });
+  }
+  function cloudSignIn(email, password) {
+    return cloudFetch("/auth/v1/token?grant_type=password", { method: "POST", json: { email: email, password: password } }).then(function (data) {
+      cloudSetSession(data);
+      return data;
+    });
+  }
+  function cloudRefresh() {
+    if (!cloud.session || !cloud.session.r) return Promise.reject(new Error("sessão expirada"));
+    return cloudFetch("/auth/v1/token?grant_type=refresh_token", { method: "POST", json: { refresh_token: cloud.session.r } }).then(function (data) {
+      cloudSetSession(data);
+      return data;
+    });
+  }
+  function cloudEnsureSession() {
+    if (!cloud.session || !cloud.session.a) return Promise.reject(new Error("entre na sua conta"));
+    if (cloud.session.e && Date.now() > cloud.session.e - 60000) return cloudRefresh();
+    return Promise.resolve();
+  }
+  function cloudLoadEntitlement() {
+    return cloudEnsureSession().then(function () {
+      return cloudFetch(CLOUD_CFG.fn + "/entitlement", { method: "POST" });
+    }).then(function (data) {
+      data = data || {};
+      cloud.premium = !!data.premium;
+      if (data.household_id) cloud.householdId = data.household_id;
+      cloud.until = data.until || null;
+      cloud.subs = data.subscriptions || null;
+      cloud.loaded = true;
+      return data;
+    });
+  }
+
+  function cloudKeyReady() { return sync.enabled && !!sync.code; }
+  function cloudWithKey(fn) {
+    return cloudEnsureSession().then(function () {
+      if (sync.key) return Promise.resolve(sync.key);
+      if (!sync.code) return Promise.reject(new Error("ative a sincronização para gerar o código de criptografia"));
+      return deriveKey(sync.code).then(function (k) { sync.key = k; return k; });
+    }).then(fn);
+  }
+
+  function cloudApplySnapshot(msg) {
+    var obj = (msg && typeof msg === "object" && !Array.isArray(msg)) ? msg : {};
+    var txs = Array.isArray(msg) ? msg : (obj.t || []);
+    state.categorias = normalizeCats(obj.c || []);
+    rebuildCatIndex();
+    state.transacoes = normalize(txs);
+    state.dividas = normalizeDebts(obj.d || []);
+    state.recebiveis = normalizeRecebiveis(obj.r || []);
+    state.contas = normalizeContas(obj.p || []);
+    state.orcamentos = normalizeOrcamentos(obj.o || []);
+  }
+
+  function cloudBusy(id, on) {
+    var b = $(id); if (!b) return;
+    if (on) { if (!cloudBusyMap[id]) cloudBusyMap[id] = b.textContent; b.textContent = "Aguarde..."; }
+    else if (cloudBusyMap[id]) { b.textContent = cloudBusyMap[id]; delete cloudBusyMap[id]; }
+  }
+
+  function cloudUpload() {
+    if (!cloud.premium) { toast("O backup na nuvem é um recurso premium."); return; }
+    if (!cloudKeyReady()) { toast("Ative a sincronização para gerar o código de criptografia."); return; }
+    cloudBusy("cloudUpload", true);
+    cloudWithKey(function () { return encryptJSON(snapshot()); }).then(function (cipher) {
+      return cloudFetch("/rest/v1/cloud_backups?on_conflict=household_id", {
+        method: "POST",
+        headers: { "Prefer": "resolution=merge-duplicates,return=minimal" },
+        json: { household_id: cloud.householdId, ciphertext: cipher, rev: Date.now() }
+      });
+    }).then(function () { toast("Backup enviado para a nuvem"); })
+      .catch(function (e) { toast("Não deu para enviar: " + (e.message || e)); })
+      .then(function () { cloudBusy("cloudUpload", false); });
+  }
+
+  function cloudDownload() {
+    if (!cloudKeyReady()) { toast("Ative a sincronização para gerar o código de criptografia."); return; }
+    cloudBusy("cloudDownload", true);
+    cloudEnsureSession().then(function () {
+      return cloudFetch("/rest/v1/cloud_backups?select=ciphertext,updated_at&limit=1");
+    }).then(function (rows) {
+      if (!rows || !rows.length || !rows[0].ciphertext) { toast("Ainda não há backup na nuvem"); return; }
+      var when = rows[0].updated_at ? new Date(rows[0].updated_at).toLocaleString("pt-BR") : "";
+      return cloudWithKey(function () { return decryptJSON(rows[0].ciphertext); }).then(function (msg) {
+        return confirmDialog("Restaurar da nuvem",
+          "Encontramos um backup" + (when ? " de " + when : "") + ". Toque em “Mesclar” para somar aos seus ou “Substituir” para trocar tudo.",
+          "Mesclar", "Substituir").then(function (merge) {
+            if (merge === null) return;
+            if (merge) {
+              var res = mergeStates(msg);
+              if (pruneTombstones()) res.changed = true;
+              if (res.changed) { if (res.catsChanged) { rebuildCatIndex(); buildCats(); } save(); render(); }
+            } else {
+              cloudApplySnapshot(msg); buildCats(); save(); render();
+            }
+            toast("Backup restaurado");
+          });
+      });
+    }).catch(function (e) { toast("Não deu para restaurar: " + (e.message || e)); })
+      .then(function () { cloudBusy("cloudDownload", false); });
+  }
+
+  function cloudRender() {
+    var block = $("cloudBlock"); if (!block) return;
+    if (!cloudConfigured()) { block.hidden = true; return; }
+    block.hidden = false;
+    var signed = !!(cloud.session && cloud.session.a);
+    if ($("cloudSignedOut")) $("cloudSignedOut").hidden = signed;
+    if ($("cloudSignedIn")) $("cloudSignedIn").hidden = !signed;
+    if (!signed) return;
+    var st = $("cloudStatus");
+    if (st) st.textContent = "Conectado como " + (cloud.email || "sua conta") + (cloud.premium ? " · Premium" : "");
+    var dot = $("cloudDot"); if (dot) dot.className = "dot " + (cloud.premium ? "online" : "offline");
+    var up = $("cloudUpload"), down = $("cloudDownload"), note = $("cloudNote");
+    if (cloud.premium) {
+      if (up) up.hidden = false;
+      if (down) down.hidden = false;
+      if (note) note.textContent = cloud.until ? ("Premium ativo até " + new Date(cloud.until).toLocaleDateString("pt-BR") + ".") : "Recurso premium ativo.";
+    } else {
+      if (up) up.hidden = true;
+      if (down) down.hidden = true;
+      if (note) note.textContent = "O backup na nuvem é um recurso premium. Assine no Android (Play) ou pela web para ativar.";
+    }
+  }
+
+  function cloudInit() {
+    cloudLoadSession();
+    if (!cloudConfigured()) { cloudRender(); return; }
+    cloudRender();
+    if (cloud.session && cloud.session.a) cloudLoadEntitlement().catch(function () {});
+  }
+
+  if ($("cloudSignIn")) $("cloudSignIn").addEventListener("click", function () {
+    if (!cloudConfigured()) { toast("Serviço de nuvem ainda não configurado"); return; }
+    var email = ($("cloudEmail").value || "").trim();
+    var pass = $("cloudPass").value || "";
+    if (!isEmail(email)) { toast("Informe um e-mail válido"); return; }
+    if (pass.length < 6) { toast("A senha precisa de 6 caracteres"); return; }
+    cloudBusy("cloudSignIn", true);
+    cloudSignIn(email, pass).then(function () {
+      return cloudLoadEntitlement();
+    }).then(function () {
+      $("cloudPass").value = "";
+      toast("Você entrou na sua conta");
+      cloudRender();
+    }).catch(function (e) { toast("Não deu para entrar: " + (e.message || e)); })
+      .then(function () { cloudBusy("cloudSignIn", false); });
+  });
+
+  if ($("cloudSignUp")) $("cloudSignUp").addEventListener("click", function () {
+    if (!cloudConfigured()) { toast("Serviço de nuvem ainda não configurado"); return; }
+    var email = ($("cloudEmail").value || "").trim();
+    var pass = $("cloudPass").value || "";
+    if (!isEmail(email)) { toast("Informe um e-mail válido"); return; }
+    if (pass.length < 6) { toast("A senha precisa de 6 caracteres"); return; }
+    cloudBusy("cloudSignUp", true);
+    cloudSignUp(email, pass).then(function (r) {
+      if (r && r.session) return cloudLoadEntitlement().then(function () { $("cloudPass").value = ""; toast("Conta criada"); });
+      return cloudSignIn(email, pass).then(function () {
+        return cloudLoadEntitlement().then(function () { $("cloudPass").value = ""; toast("Conta criada"); });
+      }).catch(function () { toast("Conta criada! Confirme pelo e-mail e depois toque em Entrar."); });
+    }).catch(function (e) { toast("Não deu para criar: " + (e.message || e)); })
+      .then(function () { cloudBusy("cloudSignUp", false); cloudRender(); });
+  });
+
+  if ($("cloudSignOut")) $("cloudSignOut").addEventListener("click", function () {
+    try { cloudFetch("/auth/v1/logout", { method: "POST" }).catch(function () {}); } catch (e) {}
+    cloud.session = null; cloud.premium = false; cloud.householdId = null;
+    cloud.until = null; cloud.subs = null; cloud.loaded = false;
+    cloudSaveSession();
+    cloudRender();
+    toast("Você saiu da conta");
+  });
+
+  if ($("cloudUpload")) $("cloudUpload").addEventListener("click", cloudUpload);
+  if ($("cloudDownload")) $("cloudDownload").addEventListener("click", cloudDownload);
+
   /* ---------------- Tema ---------------- */
   function applyTheme(t) {
     document.documentElement.setAttribute("data-theme", t);
@@ -3787,6 +4065,7 @@
   buildCats();
   render();
   initSync();
+  cloudInit();
   refreshInstallUI();
   updateNotifUI();
   $("fab").addEventListener("click", function () { openForm(null); });
