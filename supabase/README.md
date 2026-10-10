@@ -54,6 +54,19 @@ Ajustes.
 > como senha de criptografia. Por isso, para enviar/restaurar, a sincronização
 > precisa estar ativa.
 
+## 2c. Admin (premium sem pagar)
+
+O criador/equipe pode ter premium liberado de graça. Basta cadastrar o e-mail:
+
+```sql
+insert into public.admins (email) values ('seu@email.com')
+  on conflict (email) do nothing;
+```
+
+O e-mail `helio.silva315@gmail.com` já vem cadastrado no `schema.sql` — troque ou
+adicione os seus. Depois de criar a conta no app e entrar, o premium aparece
+sozinho (o app confere pelo `/entitlement`).
+
 ## 3. Publicar as funções
 
 Instale a CLI e faça deploy:

@@ -165,7 +165,31 @@ as $$
   );
 $$;
 
+-- ---------------------------------------------------------------------
+--  Admins (criador/equipe): ganham premium sem pagar.
+--  Insira o e-mail da conta assim:
+--    insert into public.admins (email) values ('voce@email.com');
+-- ---------------------------------------------------------------------
+create table if not exists public.admins (
+  email      text primary key,
+  created_at timestamptz not null default now()
+);
+
 -- Situação premium do usuário logado.
+-- Admins (criador/equipe) têm premium liberado sem assinatura.
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.admins a
+    where lower(a.email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+  );
+$$;
+
 create or replace function public.i_am_premium()
 returns boolean
 language sql
@@ -173,7 +197,7 @@ stable
 security definer
 set search_path = public
 as $$
-  select coalesce(public.is_premium(public.my_household()), false);
+  select public.is_admin() or coalesce(public.is_premium(public.my_household()), false);
 $$;
 
 -- ---------------------------------------------------------------------
@@ -194,6 +218,7 @@ alter table public.households         enable row level security;
 alter table public.household_members  enable row level security;
 alter table public.subscriptions      enable row level security;
 alter table public.cloud_backups      enable row level security;
+alter table public.admins             enable row level security;
 
 -- profiles
 drop policy if exists "profiles self read"   on public.profiles;
@@ -255,3 +280,14 @@ grant execute on function public.my_household_ids() to authenticated;
 grant execute on function public.my_household()     to authenticated;
 grant execute on function public.is_premium(uuid)   to authenticated;
 grant execute on function public.i_am_premium()     to authenticated;
+grant execute on function public.is_admin()         to authenticated;
+
+-- ---------------------------------------------------------------------
+--  Admin (criador/equipe): premium liberado sem assinatura.
+--  Troque pelo e-mail que você vai usar no login e adicione outros se
+--  quiser (uma linha por e-mail):
+--    insert into public.admins (email) values ('outro@email.com')
+--      on conflict (email) do nothing;
+-- ---------------------------------------------------------------------
+insert into public.admins (email) values ('helio.silva315@gmail.com')
+  on conflict (email) do nothing;
