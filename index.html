@@ -603,7 +603,7 @@
   </section>
 </div>
 
-<footer class="verbar">Nosso Caixa · versão <b id="verMark">v13</b></footer>
+<footer class="verbar">Nosso Caixa · versão <b id="verMark">v14</b></footer>
 
 <button class="fab" id="fab">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
@@ -3552,18 +3552,45 @@
     if (cloud.session.e && Date.now() > cloud.session.e - 60000) return cloudRefresh();
     return Promise.resolve();
   }
-  function cloudLoadEntitlement() {
-    return cloudEnsureSession().then(function () {
-      return cloudFetch(CLOUD_CFG.fn + "/entitlement", { method: "POST" });
-    }).then(function (data) {
-      data = data || {};
-      cloud.premium = !!data.premium;
-      if (data.household_id) cloud.householdId = data.household_id;
-      cloud.until = data.until || null;
-      cloud.subs = data.subscriptions || null;
-      cloud.loaded = true;
-      return data;
+  function cloudEnsureHousehold() {
+    return cloudFetch("/rest/v1/rpc/my_household", { method: "POST", json: {} }).then(function (hid) {
+      if (hid) { cloud.householdId = hid; return hid; }
+      var uid = (cloud.session && cloud.session.u && cloud.session.u.id) || null;
+      if (!uid) throw new Error("sessão inválida");
+      return cloudFetch("/rest/v1/households", {
+        method: "POST",
+        headers: { "Prefer": "return=representation" },
+        json: { owner_id: uid }
+      }).then(function (rows) {
+        var id = (rows && rows[0] && rows[0].id) || null;
+        if (!id) throw new Error("não foi possível preparar o casal");
+        cloud.householdId = id;
+        return id;
+      });
     });
+  }
+  function cloudLoadEntitlement() {
+    return cloudEnsureSession()
+      .then(cloudEnsureHousehold)
+      .then(function () {
+        return cloudFetch("/rest/v1/rpc/i_am_premium", { method: "POST", json: {} });
+      })
+      .then(function (premium) {
+        cloud.premium = !!premium;
+        cloud.loaded = true;
+        if (cloud.premium) {
+          return cloudFetch("/rest/v1/subscriptions?select=current_period_end,status&order=current_period_end.desc&limit=1")
+            .then(function (rows) {
+              cloud.subs = rows || null;
+              cloud.until = (rows && rows[0] && rows[0].current_period_end) || null;
+            }).catch(function () {});
+        }
+        cloud.until = null; cloud.subs = null;
+        return null;
+      })
+      .then(function () {
+        return { premium: cloud.premium, household_id: cloud.householdId, until: cloud.until };
+      });
   }
 
   function cloudKeyReady() { return sync.enabled && !!sync.code; }
