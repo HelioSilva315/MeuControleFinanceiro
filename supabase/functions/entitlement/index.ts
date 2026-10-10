@@ -3,7 +3,7 @@ import { userClient } from "../_shared/supabase.ts";
 
 // GET/POST /functions/v1/entitlement
 // Cabeçalho: Authorization: Bearer <jwt do usuário>
-// Resposta: { premium: boolean, until: ISO|null, subscriptions: [...] }
+// Resposta: { premium: boolean, household_id: uuid|null, until: ISO|null, subscriptions: [...] }
 Deno.serve(async (req) => {
   const pre = preflight(req);
   if (pre) return pre;
@@ -12,6 +12,18 @@ Deno.serve(async (req) => {
     const sb = userClient(req.headers.get("Authorization"));
     const { data: { user }, error } = await sb.auth.getUser();
     if (error || !user) return json({ premium: false, error: "unauthorized" }, 401);
+
+    // Garante que o usuário tem um household (o "casal").
+    let { data: householdId } = await sb.rpc("my_household");
+    if (!householdId) {
+      const { data: created, error: insErr } = await sb
+        .from("households")
+        .insert({ owner_id: user.id })
+        .select("id")
+        .single();
+      if (insErr) return json({ premium: false, household_id: null, error: insErr.message }, 500);
+      householdId = created?.id ?? null;
+    }
 
     const { data: premium } = await sb.rpc("i_am_premium");
     const { data: subs } = await sb
@@ -26,8 +38,8 @@ Deno.serve(async (req) => {
       .sort()
       .pop() ?? null;
 
-    return json({ premium: !!premium, until, subscriptions: subs ?? [] });
+    return json({ premium: !!premium, household_id: householdId, until, subscriptions: subs ?? [] });
   } catch (e) {
-    return json({ premium: false, error: String(e) }, 500);
+    return json({ premium: false, household_id: null, error: String(e) }, 500);
   }
 });

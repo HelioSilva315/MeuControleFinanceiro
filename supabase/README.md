@@ -33,6 +33,27 @@ Isso cria `profiles`, `households`, `household_members`, `subscriptions`,
 `cloud_backups`, as funções `i_am_premium()` / `is_premium()` e todas as
 políticas de segurança (RLS).
 
+## 2b. Ligar o app ao seu projeto
+
+No `index.html`, procure o bloco `CLOUD_CFG` (perto do fim do script) e troque os
+dois valores de exemplo pelos do seu projeto:
+
+```js
+var CLOUD_CFG = {
+  url: "https://SEU-PROJETO.supabase.co",   // Project URL
+  anonKey: "COLE_AQUI_A_CHAVE_ANON",        // anon public key
+  fn: "/functions/v1"
+};
+```
+
+Enquanto estiver com `SEU-PROJETO` / `COLE_AQUI`, o bloco "Conta e backup na
+nuvem" fica escondido e nada é enviado. Depois de preencher, ele aparece nos
+Ajustes.
+
+> O backup na nuvem reutiliza o **código do casal** (o mesmo da sincronização)
+> como senha de criptografia. Por isso, para enviar/restaurar, a sincronização
+> precisa estar ativa.
+
 ## 3. Publicar as funções
 
 Instale a CLI e faça deploy:
