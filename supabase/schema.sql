@@ -17,6 +17,10 @@
 
 create extension if not exists pgcrypto;
 
+-- Permite criar funções que referenciam tabelas ainda não criadas
+-- (algumas funções vêm antes das tabelas neste arquivo).
+set check_function_bodies = off;
+
 -- ---------------------------------------------------------------------
 --  Utilitários
 -- ---------------------------------------------------------------------
