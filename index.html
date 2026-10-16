@@ -284,6 +284,27 @@
   .verbar{text-align:center;font-size:11px;line-height:1.6;color:var(--mut);opacity:.85;padding:16px 16px calc(86px + env(safe-area-inset-bottom));letter-spacing:.02em}
   .verbar b{font-weight:600}
   .verbar a{color:inherit;text-decoration:none;border-bottom:1px solid currentColor;opacity:.9;margin:0 2px}
+  #printArea{display:none}
+  @media print{
+    body>*{display:none !important}
+    #printArea{display:block !important}
+    @page{margin:14mm}
+  }
+  .rep{font-family:var(--font);color:#15181c}
+  .rep h1{font-size:20px;margin:0 0 2px}
+  .rep h1 small{font-weight:500;color:#71767f;font-size:13px}
+  .rep-sub{color:#71767f;font-size:13px;margin-bottom:16px}
+  .rep-cards{display:flex;gap:10px;margin:0 0 18px}
+  .rep-cards>div{flex:1;border:1px solid #e7e8e3;border-radius:12px;padding:10px 12px}
+  .rep-cards span{display:block;font-size:11px;color:#71767f;text-transform:uppercase;letter-spacing:.04em}
+  .rep-cards b{font-size:16px}
+  .rep h2{font-size:14px;margin:18px 0 8px;border-bottom:1px solid #e7e8e3;padding-bottom:5px}
+  .rep p{font-size:13px;color:#3d424a}
+  .rep table{width:100%;border-collapse:collapse;font-size:12.5px}
+  .rep th,.rep td{text-align:left;padding:6px 8px;border-bottom:1px solid #eef0ec}
+  .rep td.num,.rep th.num{text-align:right;font-variant-numeric:tabular-nums}
+  .rep .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle}
+  .rep-foot{margin-top:22px;color:#9aa0a8;font-size:11px}
 
   /* ---------- Sheets ---------- */
   .backdrop{position:fixed;inset:0;background:rgba(18,20,24,.5);backdrop-filter:blur(3px);opacity:0;pointer-events:none;transition:opacity .28s;z-index:40}
@@ -531,6 +552,18 @@
       </div>
       <div class="dash-empty" id="donutEmpty" hidden>Sem gastos neste mês.</div>
     </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Relatórios do mês</h2>
+        <span class="hint" id="repMonth">—</span>
+      </div>
+      <div class="set-actions">
+        <button type="button" class="btn btn-primary" id="csvBtn">Exportar CSV</button>
+        <button type="button" class="btn btn-ghost" id="pdfBtn">Relatório (PDF)</button>
+      </div>
+      <div class="sync-note">O CSV abre no Excel/Planilhas Google. O PDF usa a impressão do navegador (\u201cSalvar como PDF\u201d).</div>
+    </section>
   </section>
 
   <section id="viewExtrato" hidden>
@@ -604,7 +637,9 @@
   </section>
 </div>
 
-<footer class="verbar">Nosso Caixa · versão <b id="verMark">v15</b><br><a href="./privacidade.html">Política de Privacidade</a> · <a href="./termos.html">Termos de Uso</a></footer>
+<footer class="verbar">Nosso Caixa · versão <b id="verMark">v16</b><br><a href="./privacidade.html">Política de Privacidade</a> · <a href="./termos.html">Termos de Uso</a></footer>
+
+<div id="printArea" aria-hidden="true"></div>
 
 <button class="fab" id="fab">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
@@ -1552,6 +1587,8 @@
   function renderMonth() {
     $("monthLabel").textContent = monthTitle(state.view.y, state.view.m);
     $("monthYear").textContent = state.view.y;
+    var rm = $("repMonth");
+    if (rm) rm.textContent = monthTitle(state.view.y, state.view.m) + " " + state.view.y;
   }
 
   function renderHero(md) {
@@ -1821,8 +1858,14 @@
         var dv = t.dividaId ? debtById(t.dividaId) : null;
         var rv = t.recebivelId ? recvById(t.recebivelId) : null;
         var cv = t.contaId ? contaById(t.contaId) : null;
+        var metaParts = [];
+        if (dv) metaParts.push("Parcela");
+        if (rv) metaParts.push("Recebimento" + (t.periodo ? " " + fmtDateShort(t.periodo) : ""));
+        if (cv) metaParts.push("Pagamento" + (t.periodo ? " " + fmtDateShort(t.periodo) : ""));
         row.querySelector(".tx-title").textContent = t.descricao || c.label;
-        row.querySelector(".tx-meta").textContent = (dv ? "Parcela \u00b7 " : "") + (rv ? "Recebimento" + (t.periodo ? " " + fmtDateShort(t.periodo) : "") + " \u00b7 " : "") + (cv ? "Pagamento" + (t.periodo ? " " + fmtDateShort(t.periodo) : "") + " \u00b7 " : "") + c.label;
+        var metaEl = row.querySelector(".tx-meta");
+        metaEl.textContent = metaParts.join(" \u00b7 ");
+        if (!metaParts.length) metaEl.hidden = true;
         var amt = row.querySelector(".tx-amt");
         amt.classList.add(t.tipo === "entrada" ? "in" : "out");
         amt.textContent = (t.tipo === "entrada" ? "+ " : "\u2212 ") + fmtBRL(t.valor);
@@ -3008,6 +3051,115 @@
     reader.readAsText(file);
     e.target.value = "";
   });
+
+  /* ---------------- Relatório (CSV + PDF via impressão) ---------------- */
+  function escHtml(s) {
+    return String(s == null ? "" : s).replace(/[&<>"]/g, function (ch) {
+      return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch];
+    });
+  }
+  function csvCell(v) {
+    var s = String(v == null ? "" : v);
+    return /[",;\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+  function brNum(v) { return (Math.round((Number(v) || 0) * 100) / 100).toFixed(2).replace(".", ","); }
+  function dayMonth(iso) { var p = String(iso || "").split("-"); return p.length === 3 ? (p[2] + "/" + p[1] + "/" + p[0]) : String(iso || ""); }
+  function monthItems(y, m) {
+    var md = monthData(y, m);
+    var items = md.items.slice().sort(function (a, b) {
+      if (a.data !== b.data) return a.data < b.data ? -1 : 1;
+      return (a.criadoEm || 0) - (b.criadoEm || 0);
+    });
+    return { md: md, items: items };
+  }
+  function downloadBlob(blob, name) {
+    try {
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url; a.download = name;
+      document.body.appendChild(a); a.click();
+      setTimeout(function () { document.body.removeChild(a); URL.revokeObjectURL(url); }, 0);
+      return true;
+    } catch (e) { return false; }
+  }
+  function exportMonthCSV() {
+    var y = state.view.y, m = state.view.m;
+    var data = monthItems(y, m), md = data.md;
+    var lines = [["Data", "Descrição", "Categoria", "Tipo", "Valor (R$)"].join(";")];
+    data.items.forEach(function (t) {
+      var c = CAT[t.categoria] || CAT.outros;
+      lines.push([
+        csvCell(dayMonth(t.data)),
+        csvCell(t.descricao || ""),
+        csvCell(c.label),
+        csvCell(t.tipo === "entrada" ? "Entrada" : "Saída"),
+        csvCell(brNum(t.valor))
+      ].join(";"));
+    });
+    lines.push("");
+    lines.push(["Total entradas", "", "", "", csvCell(brNum(md.entradas))].join(";"));
+    lines.push(["Total saídas", "", "", "", csvCell(brNum(md.saidas))].join(";"));
+    lines.push(["Saldo", "", "", "", csvCell(brNum(md.saldo))].join(";"));
+    var csv = "\uFEFF" + lines.join("\r\n");
+    if (downloadBlob(new Blob([csv], { type: "text/csv;charset=utf-8" }), "nosso-caixa-" + y + "-" + pad(m + 1) + ".csv")) {
+      toast("CSV exportado");
+    } else { toast("Não foi possível exportar"); }
+  }
+  function printMonthReport() {
+    var area = $("printArea"); if (!area) return;
+    var y = state.view.y, m = state.view.m;
+    var data = monthItems(y, m), md = data.md;
+    var cats = Object.keys(md.byCat).map(function (k) { return [k, md.byCat[k]]; })
+      .sort(function (a, b) { return b[1] - a[1]; });
+    var h = [];
+    h.push('<div class="rep">');
+    h.push('<h1>Nosso Caixa <small>· Relatório mensal</small></h1>');
+    h.push('<div class="rep-sub">' + escHtml(monthTitle(y, m) + " de " + y) + '</div>');
+    h.push('<div class="rep-cards">' +
+      '<div><span>Entradas</span><b>' + fmtBRL(md.entradas) + '</b></div>' +
+      '<div><span>Saídas</span><b>' + fmtBRL(md.saidas) + '</b></div>' +
+      '<div><span>Saldo</span><b>' + fmtBRL(md.saldo) + '</b></div>' +
+      '</div>');
+    h.push('<h2>Gastos por categoria</h2>');
+    if (cats.length) {
+      h.push('<table><thead><tr><th>Categoria</th><th class="num">Valor</th><th class="num">%</th></tr></thead><tbody>');
+      cats.forEach(function (e) {
+        var c = CAT[e[0]] || CAT.outros;
+        h.push('<tr><td><span class="dot" style="background:' + c.color + '"></span>' + escHtml(c.label) + '</td>' +
+          '<td class="num">' + fmtBRL(e[1]) + '</td><td class="num">' + Math.round(e[1] / md.saidas * 100) + '%</td></tr>');
+      });
+      h.push('</tbody></table>');
+    } else { h.push('<p>Sem gastos neste mês.</p>'); }
+    var buds = budgetStatus(md);
+    if (buds.length) {
+      h.push('<h2>Orçamento do mês</h2>');
+      h.push('<table><thead><tr><th>Categoria</th><th class="num">Limite</th><th class="num">Gasto</th><th class="num">Restante</th></tr></thead><tbody>');
+      buds.forEach(function (b) {
+        var c = CAT[b.categoria] || CAT.outros;
+        h.push('<tr><td><span class="dot" style="background:' + c.color + '"></span>' + escHtml(c.label) + '</td>' +
+          '<td class="num">' + fmtBRL(b.limite) + '</td><td class="num">' + fmtBRL(b.gasto) + '</td>' +
+          '<td class="num">' + (b.restante < 0 ? "-" : "") + fmtBRL(Math.abs(b.restante)) + '</td></tr>');
+      });
+      h.push('</tbody></table>');
+    }
+    h.push('<h2>Lançamentos</h2>');
+    if (data.items.length) {
+      h.push('<table><thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th class="num">Valor</th></tr></thead><tbody>');
+      data.items.forEach(function (t) {
+        var c = CAT[t.categoria] || CAT.outros;
+        var val = (t.tipo === "entrada" ? "+ " : "- ") + fmtBRL(t.valor);
+        h.push('<tr><td>' + escHtml(dayMonth(t.data)) + '</td><td>' + escHtml(t.descricao || c.label) + '</td>' +
+          '<td>' + escHtml(c.label) + '</td><td class="num">' + val + '</td></tr>');
+      });
+      h.push('</tbody></table>');
+    } else { h.push('<p>Nenhum lançamento neste mês.</p>'); }
+    h.push('<div class="rep-foot">Gerado em ' + escHtml(new Date().toLocaleString("pt-BR")) + ' \u00b7 Nosso Caixa</div>');
+    h.push('</div>');
+    area.innerHTML = h.join("");
+    window.print();
+  }
+  if ($("csvBtn")) $("csvBtn").addEventListener("click", exportMonthCSV);
+  if ($("pdfBtn")) $("pdfBtn").addEventListener("click", printMonthReport);
 
   $("clearBtn").addEventListener("click", function () {
     confirmDialog("Apagar tudo", "Todos os lançamentos, dívidas, valores a receber e contas a pagar serão removidos. Esta ação não pode ser desfeita.").then(function (ok) {
