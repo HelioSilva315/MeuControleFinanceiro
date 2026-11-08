@@ -166,8 +166,16 @@
   .orc-row .orc-actions{display:flex;gap:6px;flex:none}
   .orc-mini{padding:7px 10px;border-radius:9px;font-size:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);transition:.15s}
   .orc-mini:hover{background:var(--surface-2)}
-  .tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;background:var(--surface-2);padding:5px;border-radius:14px;border:1px solid var(--line);margin-bottom:14px}
+  .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;background:var(--surface-2);padding:5px;border-radius:14px;border:1px solid var(--line);margin-bottom:14px}
   .tabs button{padding:10px 2px;border-radius:10px;font-size:11.5px;font-weight:600;color:var(--muted);transition:.18s}
+  @media (min-width:480px){.tabs{grid-template-columns:repeat(6,1fr)}}
+  .filters{display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+  .filters .seg{flex:1;min-width:180px}
+  .filters select{padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--surface);font-size:13px;color:var(--ink);outline:none;max-width:170px}
+  .proj{display:flex;flex-direction:column;gap:10px}
+  .proj-row{display:flex;justify-content:space-between;gap:12px;font-size:13px;padding:9px 0;border-bottom:1px solid var(--line)}
+  .proj-row:last-child{border-bottom:0}
+  .proj-row span{color:var(--muted)} .proj-row b{font-variant-numeric:tabular-nums;white-space:nowrap}
   .tabs button.active{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(16,24,40,.12)}
   .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .stat{background:var(--surface-2);border:1px solid var(--line);border-radius:14px;padding:12px 14px;min-width:0}
@@ -424,8 +432,9 @@
   .sync-finger strong{color:var(--muted);letter-spacing:.08em}
 
   /* ---------- Toast ---------- */
-  .toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translate(-50%,20px);z-index:80;background:var(--btn-bg);color:var(--btn-ink);font-size:13.5px;font-weight:550;padding:11px 18px;border-radius:12px;box-shadow:0 12px 30px -10px rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:.28s;max-width:90vw;text-align:center}
-  .toast.show{opacity:1;transform:translate(-50%,0)}
+  .toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translate(-50%,20px);z-index:80;background:var(--btn-bg);color:var(--btn-ink);font-size:13.5px;font-weight:550;padding:11px 18px;border-radius:12px;box-shadow:0 12px 30px -10px rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:.28s;max-width:90vw;text-align:center;display:flex;gap:12px;align-items:center}
+  .toast.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+  .toast button{font-weight:700;text-decoration:underline;text-underline-offset:2px;flex:none}
 
   /* ---------- Confirm dialog ---------- */
   .modal{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;padding:24px}
@@ -511,6 +520,7 @@
     <button id="tabDividas" type="button">Dívidas</button>
     <button id="tabReceber" type="button">A Receber</button>
     <button id="tabPagar" type="button">A Pagar</button>
+    <button id="tabMetas" type="button">Metas</button>
   </div>
 
   <section id="viewResumo">
@@ -583,6 +593,19 @@
       </div>
       <div class="sync-note">O CSV abre no Excel/Planilhas Google. O PDF usa a impressão do navegador (\u201cSalvar como PDF\u201d).</div>
     </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Projeção: se tudo for pago/recebido</h2>
+      </div>
+      <div class="proj">
+        <div class="proj-row"><span>Saldo acumulado</span><b class="num" id="projSaldo">R$ 0,00</b></div>
+        <div class="proj-row"><span>A receber (pendente)</span><b class="num" id="projReceber" style="color:var(--pos)">R$ 0,00</b></div>
+        <div class="proj-row"><span>A pagar (pendente)</span><b class="num" id="projPagar" style="color:var(--neg)">R$ 0,00</b></div>
+        <div class="proj-row"><span>Dívidas restantes</span><b class="num" id="projDividas" style="color:var(--neg)">R$ 0,00</b></div>
+        <div class="proj-row"><span><strong>Saldo projetado</strong></span><b class="num" id="projTotal">R$ 0,00</b></div>
+      </div>
+    </section>
   </section>
 
   <section id="viewExtrato" hidden>
@@ -592,6 +615,15 @@
       <button class="clear" id="searchClear" aria-label="Limpar busca">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
       </button>
+    </div>
+
+    <div class="filters">
+      <div class="seg" role="group" aria-label="Filtrar por tipo">
+        <label><input type="radio" name="filtroTipo" value="" checked><span>Todos</span></label>
+        <label><input type="radio" name="filtroTipo" value="entrada"><span>Entradas</span></label>
+        <label><input type="radio" name="filtroTipo" value="saida"><span>Saídas</span></label>
+      </div>
+      <select id="filtroCat" aria-label="Filtrar por categoria"></select>
     </div>
 
     <div class="list-head">
@@ -654,9 +686,28 @@
     </div>
     <div id="pagarList"></div>
   </section>
+
+  <section id="viewMetas" hidden>
+    <div class="debt-toolbar">
+      <div>
+        <div class="debt-total-label">Guardado para as metas</div>
+        <div class="debt-total num" id="metasTotal">R$ 0,00</div>
+      </div>
+      <button class="btn btn-primary" id="newMetaBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+        Nova meta
+      </button>
+    </div>
+    <div class="list-head">
+      <h2>Objetivos</h2>
+      <span class="hint" id="metasCount">—</span>
+    </div>
+    <div id="metasList"></div>
+    <p class="sync-note">Aportar registra uma saída (categoria Investimentos) e retirar registra uma entrada. Assim o saldo do mês reflete o dinheiro reservado.</p>
+  </section>
 </div>
 
-<footer class="verbar">Nosso Caixa · versão <b id="verMark">v18</b><br><a href="./privacidade.html">Política de Privacidade</a> · <a href="./termos.html">Termos de Uso</a></footer>
+<footer class="verbar">Nosso Caixa · versão <b id="verMark">v23</b><br><a href="./privacidade.html">Política de Privacidade</a> · <a href="./termos.html">Termos de Uso</a></footer>
 
 <div id="printArea" aria-hidden="true"></div>
 
@@ -729,6 +780,27 @@
     <div class="field">
       <label for="dataInput">Data</label>
       <input class="input num" type="date" id="dataInput">
+    </div>
+
+    <div id="formParcelFields">
+      <div class="field">
+        <label for="parcelasInput">Parcelas (1 = à vista)</label>
+        <input class="input num" id="parcelasInput" inputmode="numeric" autocomplete="off" placeholder="Ex.: 12" value="1">
+        <div class="nl-hint">O valor é dividido em parcelas mensais. Ex.: R$ 1.200 em 12x gera 12 saídas de R$ 100.</div>
+      </div>
+      <div class="field">
+        <label>Repetir lançamento (fixo)</label>
+        <div class="seg seg3">
+          <label><input type="radio" name="formRecorrencia" value="" checked><span>Não repete</span></label>
+          <label><input type="radio" name="formRecorrencia" value="mensal"><span>Mensal</span></label>
+          <label><input type="radio" name="formRecorrencia" value="semanal"><span>Semanal</span></label>
+        </div>
+      </div>
+      <div class="field" id="formFimField" hidden>
+        <label for="formFim">Repetir até (opcional)</label>
+        <input class="input num" type="date" id="formFim">
+        <div class="nl-hint">Sem data final, criamos até 12 ocorrências futuras.</div>
+      </div>
     </div>
 
     <div class="row-actions" id="formActions">
@@ -929,6 +1001,37 @@
   </form>
 </div>
 
+<!-- Meta sheet -->
+<div class="sheet" id="metaSheet" role="dialog" aria-modal="true" aria-labelledby="metaTitle">
+  <div class="grip"></div>
+  <div class="sheet-head">
+    <h2 id="metaTitle">Nova meta</h2>
+    <button class="close" data-close aria-label="Fechar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    </button>
+  </div>
+  <form id="metaForm">
+    <div class="field">
+      <label for="metaNome">Nome</label>
+      <input class="input" id="metaNome" maxlength="60" autocomplete="off" placeholder="Ex.: Viagem, reserva de emergência, carro">
+    </div>
+    <div class="field">
+      <label for="metaObjetivo">Valor objetivo</label>
+      <div class="value-field">
+        <span class="cur">R$</span>
+        <input id="metaObjetivo" inputmode="decimal" autocomplete="off" placeholder="0,00" required>
+      </div>
+    </div>
+    <div class="field">
+      <label for="metaPrazo">Prazo (opcional)</label>
+      <input class="input num" type="date" id="metaPrazo">
+    </div>
+    <div class="row-actions" id="metaActions">
+      <button type="submit" class="btn btn-primary btn-block" id="metaSaveBtn">Salvar meta</button>
+    </div>
+  </form>
+</div>
+
 <!-- Orçamento sheet -->
 <div class="sheet" id="orcSheet" role="dialog" aria-modal="true" aria-labelledby="orcTitle">
   <div class="grip"></div>
@@ -1067,7 +1170,10 @@
       <button class="btn btn-primary" id="importBtn">Importar código</button>
       <button class="btn btn-ghost" id="importFileBtn">Escolher arquivo</button>
       <input type="file" id="importFile" accept="application/json,.json" hidden>
+      <button class="btn btn-ghost" id="importCsvBtn">Importar CSV do banco</button>
+      <input type="file" id="importCsvFile" accept=".csv,text/csv" hidden>
     </div>
+    <div class="sync-note">CSV do banco: colunas com data (dd/mm/aaaa ou aaaa-mm-dd), descrição e valor (negativo = saída). Lançamentos já existentes não são duplicados.</div>
   </div>
 
   <div class="set-block">
@@ -1082,7 +1188,7 @@
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast"><span id="toastMsg"></span><button id="toastBtn" type="button" hidden></button></div>
 
 <div class="modal" id="confirmModal">
   <div class="modal-bg" data-close-modal></div>
@@ -1163,6 +1269,7 @@
     recebiveis: [],
     contas: [],
     orcamentos: [],
+    metas: [],
     categorias: [],
     view: { y: 0, m: 0 },
     query: "",
@@ -1175,7 +1282,11 @@
     editingContaId: null,
     formContaId: null,
     formContaPeriodo: null,
-    editingOrcId: null
+    formMetaId: null,
+    editingOrcId: null,
+    editingMetaId: null,
+    filtroTipo: "",
+    filtroCat: ""
   };
   var now = new Date();
   state.view.y = now.getFullYear();
@@ -1238,7 +1349,7 @@
 
   /* ---------------- Persistência ---------------- */
   function snapshot() {
-    return { v: 3, transacoes: state.transacoes, dividas: state.dividas, categorias: state.categorias, recebiveis: state.recebiveis, contas: state.contas, orcamentos: state.orcamentos };
+    return { v: 4, transacoes: state.transacoes, dividas: state.dividas, categorias: state.categorias, recebiveis: state.recebiveis, contas: state.contas, orcamentos: state.orcamentos, metas: state.metas };
   }
   function save() {
     try { localStorage.setItem(KEY, JSON.stringify(snapshot())); } catch (e) {}
@@ -1249,13 +1360,14 @@
   }
   function pruneTombstones() {
     var limit = Date.now() - 120 * 24 * 60 * 60 * 1000;
-    var before = state.transacoes.length + state.dividas.length + state.recebiveis.length + state.contas.length + state.orcamentos.length;
+    var before = state.transacoes.length + state.dividas.length + state.recebiveis.length + state.contas.length + state.orcamentos.length + state.metas.length;
     state.transacoes = state.transacoes.filter(function (t) { return !t.deleted || (t.updatedAt || 0) > limit; });
     state.dividas = state.dividas.filter(function (d) { return !d.deleted || (d.updatedAt || 0) > limit; });
     state.recebiveis = state.recebiveis.filter(function (r) { return !r.deleted || (r.updatedAt || 0) > limit; });
     state.contas = state.contas.filter(function (c) { return !c.deleted || (c.updatedAt || 0) > limit; });
     state.orcamentos = state.orcamentos.filter(function (o) { return !o.deleted || (o.updatedAt || 0) > limit; });
-    return (state.transacoes.length + state.dividas.length + state.recebiveis.length + state.contas.length + state.orcamentos.length) !== before;
+    state.metas = state.metas.filter(function (o) { return !o.deleted || (o.updatedAt || 0) > limit; });
+    return (state.transacoes.length + state.dividas.length + state.recebiveis.length + state.contas.length + state.orcamentos.length + state.metas.length) !== before;
   }
   function normalize(list) {
     if (!Array.isArray(list)) return [];
@@ -1271,6 +1383,11 @@
         dividaId: t.dividaId ? String(t.dividaId) : null,
         recebivelId: t.recebivelId ? String(t.recebivelId) : null,
         contaId: t.contaId ? String(t.contaId) : null,
+        metaId: t.metaId ? String(t.metaId) : null,
+        parcelaGrupo: t.parcelaGrupo ? String(t.parcelaGrupo) : null,
+        parcelaNum: Number(t.parcelaNum) || 0,
+        parcelaTotal: Number(t.parcelaTotal) || 0,
+        serieId: t.serieId ? String(t.serieId) : null,
         periodo: t.periodo ? String(t.periodo) : null,
         criadoEm: criadoEm,
         updatedAt: Number(t.updatedAt) || criadoEm,
@@ -1348,6 +1465,21 @@
       };
     }).filter(function (o) { return o.valor > 0 || o.deleted; });
   }
+  function normalizeMetas(list) {
+    if (!Array.isArray(list)) return [];
+    return list.filter(function (o) { return o && typeof o === "object"; }).map(function (o) {
+      var criadoEm = Number(o.criadoEm) || Date.now();
+      return {
+        id: o.id ? String(o.id) : uid(),
+        nome: typeof o.nome === "string" ? o.nome.slice(0, 60).trim() : "",
+        objetivo: Math.abs(Number(o.objetivo)) || 0,
+        prazo: /^\d{4}-\d{2}-\d{2}$/.test(o.prazo) ? o.prazo : "",
+        criadoEm: criadoEm,
+        updatedAt: Number(o.updatedAt) || criadoEm,
+        deleted: !!o.deleted
+      };
+    }).filter(function (o) { return o.nome || o.objetivo > 0 || o.deleted; });
+  }
   function normalizeCats(list) {
     if (!Array.isArray(list)) return [];
     return list.filter(function (c) { return c && typeof c === "object"; }).map(function (c) {
@@ -1401,6 +1533,7 @@
           state.recebiveis = [];
           state.contas = [];
           state.orcamentos = [];
+          state.metas = [];
         } else if (parsed && typeof parsed === "object") {
           state.categorias = normalizeCats(parsed.categorias);
           rebuildCatIndex();
@@ -1409,6 +1542,7 @@
           state.recebiveis = normalizeRecebiveis(parsed.recebiveis);
           state.contas = normalizeContas(parsed.contas);
           state.orcamentos = normalizeOrcamentos(parsed.orcamentos);
+          state.metas = normalizeMetas(parsed.metas);
         }
         return;
       }
@@ -1421,10 +1555,11 @@
         state.recebiveis = [];
         state.contas = [];
         state.orcamentos = [];
+        state.metas = [];
         save();
         localStorage.removeItem(OLD_KEY);
       }
-    } catch (e) { state.categorias = []; rebuildCatIndex(); state.transacoes = []; state.dividas = []; state.recebiveis = []; state.contas = []; state.orcamentos = []; }
+    } catch (e) { state.categorias = []; rebuildCatIndex(); state.transacoes = []; state.dividas = []; state.recebiveis = []; state.contas = []; state.orcamentos = []; state.metas = []; }
   }
 
   /* ---------------- Cálculos ---------------- */
@@ -1613,6 +1748,28 @@
     return contaRemaining(p) > 0 && p.vencimento < todayISO();
   }
   function contaCompetencia(p, key) { return schedCompetencia(p, key); }
+
+  /* ---------------- Metas (v22) ---------------- */
+  function metaById(id) {
+    for (var i = 0; i < state.metas.length; i++) if (state.metas[i].id === id) return state.metas[i];
+    return null;
+  }
+  function metaSaved(id) {
+    return state.transacoes.reduce(function (s, t) {
+      if (t.deleted || t.metaId !== id) return s;
+      return s + (t.tipo === "saida" ? t.valor : -t.valor);
+    }, 0);
+  }
+  function activeMetas() {
+    return state.metas.filter(function (m) { return !m.deleted && m.objetivo > 0; })
+      .sort(function (a, b) { return (b.criadoEm || 0) - (a.criadoEm || 0); });
+  }
+  function addMonthsClamped(d, months) {
+    var y = d.getFullYear(), m = d.getMonth() + months;
+    var ny = y + Math.floor(m / 12), nm = ((m % 12) + 12) % 12;
+    var ultimo = new Date(ny, nm + 1, 0).getDate();
+    return new Date(ny, nm, Math.min(d.getDate(), ultimo));
+  }
 
   /* ---------------- Render ---------------- */
   var $ = function (id) { return document.getElementById(id); };
@@ -1837,6 +1994,8 @@
       if (a.data !== b.data) return a.data < b.data ? 1 : -1;
       return (b.criadoEm || 0) - (a.criadoEm || 0);
     });
+    if (state.filtroTipo) items = items.filter(function (t) { return t.tipo === state.filtroTipo; });
+    if (state.filtroCat) items = items.filter(function (t) { return t.categoria === state.filtroCat; });
     if (q) items = items.filter(function (t) {
       var label = (CAT[t.categoria] || CAT.outros).label.toLowerCase();
       return (t.descricao || "").toLowerCase().indexOf(q) > -1 || label.indexOf(q) > -1;
@@ -1885,16 +2044,21 @@
           '<span class="tx-body"><span class="tx-title"></span><span class="tx-meta"></span></span>' +
           '<span class="tx-amt num"></span>' +
           '<span class="tx-actions">' +
+            '<button type="button" class="tx-act" data-dup aria-label="Duplicar lançamento"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button>' +
             '<button type="button" class="tx-act" data-edit aria-label="Editar lançamento"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>' +
             '<button type="button" class="tx-act danger" data-del aria-label="Excluir lançamento"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="m19 6-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6"/></svg></button>' +
           '</span>';
         var dv = t.dividaId ? debtById(t.dividaId) : null;
         var rv = t.recebivelId ? recvById(t.recebivelId) : null;
         var cv = t.contaId ? contaById(t.contaId) : null;
+        var mv = t.metaId ? metaById(t.metaId) : null;
         var metaParts = [];
-        if (dv) metaParts.push("Parcela");
+        if (t.parcelaTotal > 1) metaParts.push("Parcela " + t.parcelaNum + "/" + t.parcelaTotal);
+        if (t.serieId) metaParts.push("Fixo");
+        if (dv) metaParts.push("Parcela de dívida");
         if (rv) metaParts.push("Recebimento" + (t.periodo ? " " + fmtDateShort(t.periodo) : ""));
         if (cv) metaParts.push("Pagamento" + (t.periodo ? " " + fmtDateShort(t.periodo) : ""));
+        if (mv) metaParts.push("Meta: " + mv.nome); else if (t.metaId) metaParts.push("Meta");
         row.querySelector(".tx-title").textContent = t.descricao || c.label;
         var metaEl = row.querySelector(".tx-meta");
         metaEl.textContent = metaParts.join(" \u00b7 ");
@@ -1903,6 +2067,7 @@
         amt.classList.add(t.tipo === "entrada" ? "in" : "out");
         amt.textContent = (t.tipo === "entrada" ? "+ " : "\u2212 ") + fmtBRL(t.valor);
         row.querySelector("[data-edit]").addEventListener("click", function (e) { e.stopPropagation(); openForm(t); });
+        row.querySelector("[data-dup]").addEventListener("click", function (e) { e.stopPropagation(); duplicateTransaction(t); });
         row.querySelector("[data-del]").addEventListener("click", function (e) { e.stopPropagation(); deleteTransaction(t); });
         row.addEventListener("click", function () { openForm(t); });
         row.addEventListener("keydown", function (e) {
@@ -2276,16 +2441,92 @@
     if (changed) { try { localStorage.setItem(ORC_ALERT_KEY, JSON.stringify(orcAlerts)); } catch (e) {} }
   }
 
+  function renderProjecao() {
+    var saldo = state.transacoes.reduce(function (s, t) {
+      if (t.deleted) return s;
+      return s + (t.tipo === "entrada" ? t.valor : -t.valor);
+    }, 0);
+    var receber = activeRecv().reduce(function (s, r) { return s + recvRemaining(r); }, 0);
+    var pagar = activeContas().reduce(function (s, p) { return s + contaRemaining(p); }, 0);
+    var dividas = activeDebts().reduce(function (s, d) { return s + debtRemaining(d); }, 0);
+    var proj = saldo + receber - pagar - dividas;
+    if ($("projSaldo")) $("projSaldo").textContent = fmtBRL(saldo);
+    if ($("projReceber")) $("projReceber").textContent = fmtBRL(receber);
+    if ($("projPagar")) $("projPagar").textContent = fmtBRL(pagar);
+    if ($("projDividas")) $("projDividas").textContent = fmtBRL(dividas);
+    var el = $("projTotal");
+    if (el) { el.textContent = fmtBRL(proj); el.style.color = proj >= 0 ? "var(--pos)" : "var(--neg)"; }
+  }
+
+  function renderMetas() {
+    var wrap = $("metasList");
+    if (!wrap) return;
+    var list = activeMetas();
+    var totalGuardado = list.reduce(function (s, m) { return s + Math.max(0, metaSaved(m.id)); }, 0);
+    $("metasTotal").textContent = fmtBRL(totalGuardado);
+    $("metasCount").textContent = list.length + (list.length === 1 ? " meta" : " metas");
+    wrap.innerHTML = "";
+    if (!list.length) {
+      var empty = document.createElement("div");
+      empty.className = "empty";
+      empty.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg><p>Nenhuma meta ainda. Crie um objetivo (viagem, reserva, carro) e aporte aos poucos.</p>';
+      wrap.appendChild(empty);
+      return;
+    }
+    list.forEach(function (m) {
+      var guardado = Math.max(0, metaSaved(m.id));
+      var pct = m.objetivo > 0 ? Math.min(100, (guardado / m.objetivo) * 100) : 0;
+      var done = guardado >= m.objetivo - 0.005;
+      var falta = Math.max(0, m.objetivo - guardado);
+      var card = document.createElement("div");
+      card.className = "debt" + (done ? " done" : "");
+      card.innerHTML =
+        '<div class="debt-top"><div><div class="debt-name"></div><div class="debt-sub"></div></div>' +
+        '<div class="debt-rest"><b class="num"></b><small></small></div></div>' +
+        '<div class="debt-track"><div class="debt-fill"></div></div>' +
+        '<div class="debt-foot"><span class="debt-pago num"></span><span class="debt-pct num"></span></div>' +
+        '<div class="debt-actions"></div>';
+      card.querySelector(".debt-name").textContent = m.nome;
+      card.querySelector(".debt-sub").textContent = m.prazo ? ("Prazo " + fmtDateShort(m.prazo)) : "Sem prazo definido";
+      card.querySelector(".debt-rest b").textContent = fmtBRL(falta);
+      card.querySelector(".debt-rest small").textContent = done ? "meta atingida" : "falta";
+      card.querySelector(".debt-pago").textContent = "Guardado " + fmtBRL(guardado) + " de " + fmtBRL(m.objetivo);
+      card.querySelector(".debt-pct").textContent = Math.round(pct) + "%";
+      var fill = card.querySelector(".debt-fill");
+      requestAnimationFrame(function () { fill.style.width = pct + "%"; });
+      var actions = card.querySelector(".debt-actions");
+      if (!done) {
+        var ap = document.createElement("button");
+        ap.className = "btn btn-primary"; ap.textContent = "Aportar";
+        ap.addEventListener("click", function () { aportarMeta(m, "saida"); });
+        actions.appendChild(ap);
+      }
+      if (guardado > 0) {
+        var ret = document.createElement("button");
+        ret.className = "btn btn-ghost"; ret.textContent = "Retirar";
+        ret.addEventListener("click", function () { aportarMeta(m, "entrada"); });
+        actions.appendChild(ret);
+      }
+      var edit = document.createElement("button");
+      edit.className = "btn btn-ghost"; edit.textContent = "Editar";
+      edit.addEventListener("click", function () { openMetaForm(m); });
+      actions.appendChild(edit);
+      wrap.appendChild(card);
+    });
+  }
+
   function render() {
     var md = monthData(state.view.y, state.view.m);
     renderMonth();
     renderHero(md);
     renderDashboard(md);
     renderOrcamento(md);
+    renderProjecao();
     renderList(md);
     renderDividas();
     renderReceber();
     renderPagar();
+    renderMetas();
   }
 
   /* ---------------- Sheets ---------------- */
@@ -2337,6 +2578,7 @@
     $("debtCats").innerHTML = "";
     var prevPagar = selectedRadio("pagarCategoria");
     $("recvCats").innerHTML = "";
+    $("pagarCats").innerHTML = "";
     var orcWrap = $("orcCats");
     var prevOrc = selectedRadio("orcCategoria");
     if (orcWrap) orcWrap.innerHTML = "";
@@ -2351,6 +2593,7 @@
     if (prevRecv) setRadio("recvCategoria", prevRecv);
     if (prevPagar) setRadio("pagarCategoria", prevPagar);
     if (prevOrc && prevOrc !== "outros") setRadio("orcCategoria", prevOrc);
+    buildFiltroCat();
   }
 
   /* ---------------- Categorias personalizadas ---------------- */
@@ -2467,6 +2710,10 @@
     if (el) el.checked = true;
   }
 
+  function formRecorrToggle() {
+    var rec = selectedRadio("formRecorrencia");
+    $("formFimField").hidden = !(rec === "mensal" || rec === "semanal");
+  }
   function openForm(tx) {
     var form = $("form");
     form.reset();
@@ -2479,6 +2726,7 @@
       state.formRecebivelPeriodo = tx.periodo || null;
       state.formContaId = tx.contaId || null;
       state.formContaPeriodo = tx.periodo || null;
+      state.formMetaId = tx.metaId || null;
       $("formTitle").textContent = "Editar lançamento";
       $("saveBtn").textContent = "Salvar alterações";
       setTipo(tx.tipo);
@@ -2486,6 +2734,7 @@
       $("descricao").value = tx.descricao || "";
       setCategoria(tx.categoria);
       $("dataInput").value = tx.data;
+      $("formParcelFields").hidden = true;
       var actions = $("formActions");
       actions.className = "row-actions two";
       if (!$("deleteBtn")) {
@@ -2505,11 +2754,17 @@
       state.formRecebivelPeriodo = null;
       state.formContaId = null;
       state.formContaPeriodo = null;
+      state.formMetaId = null;
       $("formTitle").textContent = "Novo lançamento";
       $("saveBtn").textContent = "Salvar lançamento";
       setTipo("saida");
       setCategoria("alimentacao");
       $("dataInput").value = todayISO();
+      $("formParcelFields").hidden = !!(state.formDividaId || state.formRecebivelId || state.formContaId || state.formMetaId);
+      $("parcelasInput").value = "1";
+      setRadio("formRecorrencia", "");
+      $("formFim").value = "";
+      formRecorrToggle();
       var d = $("deleteBtn"); if (d) d.remove();
       $("formActions").className = "row-actions";
     }
@@ -2517,13 +2772,30 @@
     setTimeout(function () { $("valor").focus(); }, 320);
   }
 
+  function duplicateTransaction(tx) {
+    if (!tx) return;
+    var ts = Date.now();
+    var copy = {
+      id: uid(), descricao: tx.descricao || "", valor: tx.valor, tipo: tx.tipo,
+      categoria: tx.categoria, data: tx.data, dividaId: null, recebivelId: null, contaId: null, metaId: null,
+      parcelaGrupo: null, parcelaNum: 0, parcelaTotal: 0, serieId: null, periodo: null,
+      criadoEm: ts, updatedAt: ts, deleted: false
+    };
+    state.transacoes.unshift(copy);
+    save(); render(); toast("Lançamento duplicado");
+  }
+
   function deleteTransaction(tx) {
     if (!tx) return;
-    confirmDialog("Excluir lançamento", "Esta ação não pode ser desfeita.").then(function (ok) {
+    confirmDialog("Excluir lançamento", "Você poderá desfazer logo depois.").then(function (ok) {
       if (!ok) return;
       tx.deleted = true; tx.updatedAt = Date.now();
       pruneTombstones();
-      save(); render(); closeSheets(); toast("Lançamento excluído");
+      save(); render(); closeSheets();
+      toastAction("Lançamento excluído", "Desfazer", function () {
+        tx.deleted = false; tx.updatedAt = Date.now();
+        save(); render(); toast("Lançamento restaurado");
+      });
     });
   }
 
@@ -2543,22 +2815,70 @@
     var dividaId = state.formDividaId || null;
     var recebivelId = state.formRecebivelId || null;
     var contaId = state.formContaId || null;
+    var metaId = state.formMetaId || null;
     var periodo = state.formRecebivelPeriodo || state.formContaPeriodo || null;
 
     if (state.editingId) {
       var tx = state.transacoes.filter(function (t) { return t.id === state.editingId; })[0];
-      if (tx) { tx.valor = valor; tx.tipo = tipo; tx.descricao = descricao; tx.categoria = categoria; tx.data = data; tx.dividaId = dividaId; tx.recebivelId = recebivelId; tx.contaId = contaId; tx.periodo = periodo; tx.updatedAt = Date.now(); }
+      if (tx) { tx.valor = valor; tx.tipo = tipo; tx.descricao = descricao; tx.categoria = categoria; tx.data = data; tx.dividaId = dividaId; tx.recebivelId = recebivelId; tx.contaId = contaId; tx.metaId = metaId; tx.periodo = periodo; tx.updatedAt = Date.now(); }
       toast("Lançamento atualizado");
     } else {
       var ts = Date.now();
-      state.transacoes.unshift({
-        id: uid(), descricao: descricao, valor: valor, tipo: tipo,
-        categoria: categoria, data: data, dividaId: dividaId, recebivelId: recebivelId, contaId: contaId, periodo: periodo,
-        criadoEm: ts, updatedAt: ts, deleted: false
-      });
-      toast(recebivelId ? "Recebimento registrado" : (contaId ? "Pagamento registrado" : (dividaId ? "Parcela registrada" : "Lançamento salvo")));
+      var isLinked = !!(dividaId || recebivelId || contaId || metaId);
+      var nParcelas = isLinked ? 1 : Math.max(1, Math.min(24, Math.round(parseValor($("parcelasInput").value) || 1)));
+      var recForm = isLinked ? "" : selectedRadio("formRecorrencia");
+      if (nParcelas > 1) {
+        var grupo = uid();
+        var base = Math.round((valor / nParcelas) * 100) / 100;
+        var startDate = isoToDate(data);
+        var created = 0;
+        for (var pi = 0; pi < nParcelas; pi++) {
+          var vParcela = pi === nParcelas - 1 ? Math.round((valor - base * (nParcelas - 1)) * 100) / 100 : base;
+          if (vParcela <= 0) continue;
+          state.transacoes.unshift({
+            id: uid(), descricao: descricao, valor: vParcela, tipo: tipo,
+            categoria: categoria, data: isoFromDate(addMonthsClamped(startDate, pi)),
+            dividaId: dividaId, recebivelId: recebivelId, contaId: contaId, metaId: metaId,
+            parcelaGrupo: grupo, parcelaNum: pi + 1, parcelaTotal: nParcelas, serieId: null, periodo: periodo,
+            criadoEm: ts, updatedAt: ts, deleted: false
+          });
+          created++;
+        }
+        toast(created + " parcelas criadas");
+      } else if (recForm === "mensal" || recForm === "semanal") {
+        var serie = uid();
+        var fimRaw = $("formFim").value;
+        var fim = /^\d{4}-\d{2}-\d{2}$/.test(fimRaw) ? fimRaw : "";
+        if (fim && fim < data) { toast("Data final anterior à primeira ocorrência"); $("formFim").focus(); return; }
+        var d0 = isoToDate(data), guard = 0, createdR = 0;
+        var limite = fim ? fim : isoFromDate(addMonthsClamped(d0, recForm === "mensal" ? 11 : 51));
+        while (isoFromDate(d0) <= limite && guard < 60) {
+          state.transacoes.unshift({
+            id: uid(), descricao: descricao, valor: valor, tipo: tipo,
+            categoria: categoria, data: isoFromDate(d0),
+            dividaId: dividaId, recebivelId: recebivelId, contaId: contaId, metaId: metaId,
+            parcelaGrupo: null, parcelaNum: 0, parcelaTotal: 0, serieId: serie, periodo: periodo,
+            criadoEm: ts, updatedAt: ts, deleted: false
+          });
+          createdR++;
+          d0 = recForm === "semanal" ? recvAddIntervalo(d0, "semanal") : addMonthsClamped(d0, 1);
+          guard++;
+        }
+        toast(createdR + " ocorrências criadas");
+      } else {
+        state.transacoes.unshift({
+          id: uid(), descricao: descricao, valor: valor, tipo: tipo,
+          categoria: categoria, data: data, dividaId: dividaId, recebivelId: recebivelId, contaId: contaId, metaId: metaId,
+          parcelaGrupo: null, parcelaNum: 0, parcelaTotal: 0, serieId: null, periodo: periodo,
+          criadoEm: ts, updatedAt: ts, deleted: false
+        });
+        toast(recebivelId ? "Recebimento registrado" : (contaId ? "Pagamento registrado" : (dividaId ? "Parcela registrada" : (metaId ? "Movimento da meta registrado" : "Lançamento salvo"))));
+      }
     }
     save(); render(); closeSheets();
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('input[name="formRecorrencia"]'), function (el) {
+    el.addEventListener("change", formRecorrToggle);
   });
 
   /* ---------------- Linguagem natural ---------------- */
@@ -2837,6 +3157,7 @@
     if (rest <= 0) { toast("Dívida já quitada"); return; }
     openForm(null);
     state.formDividaId = d.id;
+    $("formParcelFields").hidden = true;
     $("formTitle").textContent = "Pagar parcela";
     $("saveBtn").textContent = "Registrar pagamento";
     setCategoria(d.categoria);
@@ -2929,6 +3250,7 @@
       var valorPend = Math.max(0, r.valorTotal - pago) || r.valorTotal;
       openForm(null);
       state.formRecebivelId = r.id;
+      $("formParcelFields").hidden = true;
       state.formRecebivelPeriodo = target;
       $("formTitle").textContent = "Receber " + recvCompetencia(r, target);
       $("saveBtn").textContent = "Registrar entrada";
@@ -2944,6 +3266,7 @@
     if (rest <= 0) { toast("Já totalmente recebido"); return; }
     openForm(null);
     state.formRecebivelId = r.id;
+    $("formParcelFields").hidden = true;
     $("formTitle").textContent = "Receber valor";
     $("saveBtn").textContent = "Registrar entrada";
     setTipo("entrada");
@@ -3070,6 +3393,7 @@
       var valorPend = Math.max(0, p.valorTotal - pago) || p.valorTotal;
       openForm(null);
       state.formContaId = p.id;
+      $("formParcelFields").hidden = true;
       state.formContaPeriodo = target;
       $("formTitle").textContent = "Pagar " + contaCompetencia(p, target);
       $("saveBtn").textContent = "Registrar pagamento";
@@ -3085,6 +3409,7 @@
     if (rest <= 0) { toast("Conta já paga"); return; }
     openForm(null);
     state.formContaId = p.id;
+    $("formParcelFields").hidden = true;
     $("formTitle").textContent = "Pagar conta";
     $("saveBtn").textContent = "Registrar pagamento";
     setTipo("saida");
@@ -3200,6 +3525,87 @@
 
   $("newPagarBtn").addEventListener("click", function () { openPagarForm(null); });
 
+  /* ---------------- Metas: telas (v22) ---------------- */
+  function aportarMeta(m, tipo) {
+    var guardado = Math.max(0, metaSaved(m.id));
+    var falta = Math.max(0, m.objetivo - guardado);
+    if (tipo === "saida" && falta <= 0) { toast("Meta já atingida"); return; }
+    if (tipo === "entrada" && guardado <= 0) { toast("Nada guardado para retirar"); return; }
+    openForm(null);
+    state.formMetaId = m.id;
+    $("formParcelFields").hidden = true;
+    $("formTitle").textContent = tempoTitleMeta(m, tipo);
+    $("saveBtn").textContent = "Registrar";
+    setTipo(tipo);
+    setCategoria("investimentos");
+    var sugerido = tipo === "saida" ? Math.min(falta, m.objetivo / 12 || falta) : guardado;
+    $("valor").value = sugerido.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    $("descricao").value = (tipo === "saida" ? "Aporte: " : "Retirada: ") + m.nome;
+    var del = $("deleteBtn"); if (del) del.remove();
+  }
+  function tempoTitleMeta(m, tipo) { return (tipo === "saida" ? "Aportar na meta: " : "Retirar da meta: ") + m.nome; }
+
+  function openMetaForm(meta) {
+    var form = $("metaForm");
+    form.reset();
+    var actions = $("metaActions");
+    if (meta) {
+      state.editingMetaId = meta.id;
+      $("metaTitle").textContent = "Editar meta";
+      $("metaSaveBtn").textContent = "Salvar alterações";
+      $("metaNome").value = meta.nome || "";
+      $("metaObjetivo").value = meta.objetivo.toLocaleString("pt-BR", { minimumFractionDigits: 2 });
+      $("metaPrazo").value = meta.prazo || "";
+      actions.className = "row-actions two";
+      if (!$("metaDeleteBtn")) {
+        var del = document.createElement("button");
+        del.type = "button"; del.id = "metaDeleteBtn"; del.className = "btn btn-danger";
+        del.setAttribute("aria-label", "Excluir meta");
+        del.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="m19 6-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6"/></svg>';
+        del.addEventListener("click", onDeleteMeta);
+        actions.appendChild(del);
+      }
+    } else {
+      state.editingMetaId = null;
+      $("metaTitle").textContent = "Nova meta";
+      $("metaSaveBtn").textContent = "Salvar meta";
+      var d = $("metaDeleteBtn"); if (d) d.remove();
+      actions.className = "row-actions";
+    }
+    openSheet("metaSheet");
+    setTimeout(function () { $("metaObjetivo").focus(); }, 320);
+  }
+  function onDeleteMeta() {
+    var id = state.editingMetaId;
+    if (!id) return;
+    confirmDialog("Excluir meta", "A meta sai da lista. Os aportes já feitos continuam no extrato.").then(function (ok) {
+      if (!ok) return;
+      var m = metaById(id);
+      if (m) { m.deleted = true; m.updatedAt = Date.now(); }
+      pruneTombstones();
+      save(); render(); closeSheets(); toast("Meta excluída");
+    });
+  }
+  $("metaForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var objetivo = parseValor($("metaObjetivo").value);
+    if (!isFinite(objetivo) || objetivo <= 0) { toast("Informe o valor objetivo"); $("metaObjetivo").focus(); return; }
+    var nome = $("metaNome").value.trim();
+    if (!nome) { toast("Informe um nome para a meta"); $("metaNome").focus(); return; }
+    var prazo = /^\d{4}-\d{2}-\d{2}$/.test($("metaPrazo").value) ? $("metaPrazo").value : "";
+    if (state.editingMetaId) {
+      var m = metaById(state.editingMetaId);
+      if (m) { m.nome = nome; m.objetivo = objetivo; m.prazo = prazo; m.updatedAt = Date.now(); }
+      toast("Meta atualizada");
+    } else {
+      var ts = Date.now();
+      state.metas.unshift({ id: uid(), nome: nome, objetivo: objetivo, prazo: prazo, criadoEm: ts, updatedAt: ts, deleted: false });
+      toast("Meta criada");
+    }
+    save(); render(); closeSheets();
+  });
+  $("newMetaBtn").addEventListener("click", function () { openMetaForm(null); });
+
   /* ---------------- Navegação de mês ---------------- */
   $("prevMonth").addEventListener("click", function () {
     state.view.m--; if (state.view.m < 0) { state.view.m = 11; state.view.y--; } render();
@@ -3222,6 +3628,32 @@
   $("searchClear").addEventListener("click", function () {
     searchInput.value = ""; state.query = ""; searchWrap.classList.remove("filled");
     renderList(monthData(state.view.y, state.view.m)); searchInput.focus();
+  });
+
+  function buildFiltroCat() {
+    var sel = $("filtroCat");
+    if (!sel) return;
+    var prev = state.filtroCat;
+    sel.innerHTML = "";
+    var all = document.createElement("option");
+    all.value = ""; all.textContent = "Todas as categorias";
+    sel.appendChild(all);
+    activeCats().forEach(function (c) {
+      var o = document.createElement("option");
+      o.value = c.id; o.textContent = c.label;
+      sel.appendChild(o);
+    });
+    sel.value = prev || "";
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('input[name="filtroTipo"]'), function (el) {
+    el.addEventListener("change", function () {
+      state.filtroTipo = el.value;
+      renderList(monthData(state.view.y, state.view.m));
+    });
+  });
+  if ($("filtroCat")) $("filtroCat").addEventListener("change", function (e) {
+    state.filtroCat = e.target.value;
+    renderList(monthData(state.view.y, state.view.m));
   });
 
   /* ---------------- Compartilhar / Importar ---------------- */
@@ -3289,9 +3721,9 @@
       try { data = JSON.parse(fromB64(text.trim())); }
       catch (e2) { toast("Código inválido"); return; }
     }
-    var txs, dvs, cvs, rvs, pvs, ovs;
-    if (Array.isArray(data)) { txs = data; dvs = []; cvs = []; rvs = []; pvs = []; ovs = []; }
-    else if (data && typeof data === "object") { txs = data.transacoes || []; dvs = data.dividas || []; cvs = data.categorias || []; rvs = data.recebiveis || []; pvs = data.contas || []; ovs = data.orcamentos || []; }
+    var txs, dvs, cvs, rvs, pvs, ovs, mts;
+    if (Array.isArray(data)) { txs = data; dvs = []; cvs = []; rvs = []; pvs = []; ovs = []; mts = []; }
+    else if (data && typeof data === "object") { txs = data.transacoes || data.t || []; dvs = data.dividas || data.d || []; cvs = data.categorias || data.c || []; rvs = data.recebiveis || data.r || []; pvs = data.contas || data.p || []; ovs = data.orcamentos || data.o || []; mts = data.metas || data.m || []; }
     else { toast("Formato não reconhecido"); return; }
     var incoming = normalize(txs);
     var incomingDebts = normalizeDebts(dvs);
@@ -3299,7 +3731,8 @@
     var incomingRecv = normalizeRecebiveis(rvs);
     var incomingContas = normalizeContas(pvs);
     var incomingOrc = normalizeOrcamentos(ovs);
-    if (!incoming.length && !incomingDebts.length && !incomingCats.length && !incomingRecv.length && !incomingContas.length && !incomingOrc.length) { toast("Nenhum lançamento encontrado"); return; }
+    var incomingMetas = normalizeMetas(mts);
+    if (!incoming.length && !incomingDebts.length && !incomingCats.length && !incomingRecv.length && !incomingContas.length && !incomingOrc.length && !incomingMetas.length) { toast("Nenhum lançamento encontrado"); return; }
     var nTx = incoming.length, nDv = incomingDebts.length;
     confirmDialog(
       "Importar dados",
@@ -3326,7 +3759,10 @@
         var oids = {}; state.orcamentos.forEach(function (o) { oids[o.id] = true; });
         var addedO = 0;
         incomingOrc.forEach(function (o) { if (!oids[o.id]) { state.orcamentos.push(o); oids[o.id] = true; addedO++; } });
-        toast((added || addedD || addedC || addedR || addedC2 || addedO) ? (added + addedD + addedC + addedR + addedC2 + addedO) + " item(ns) adicionado(s)" : "Tudo já estava atualizado");
+        var mids = {}; state.metas.forEach(function (o) { mids[o.id] = true; });
+        var addedM = 0;
+        incomingMetas.forEach(function (o) { if (!mids[o.id]) { state.metas.push(o); mids[o.id] = true; addedM++; } });
+        toast((added || addedD || addedC || addedR || addedC2 || addedO || addedM) ? (added + addedD + addedC + addedR + addedC2 + addedO + addedM) + " item(ns) adicionado(s)" : "Tudo já estava atualizado");
       } else {
         state.transacoes = incoming;
         state.dividas = incomingDebts;
@@ -3334,6 +3770,7 @@
         state.recebiveis = incomingRecv;
         state.contas = incomingContas;
         state.orcamentos = incomingOrc;
+        state.metas = incomingMetas;
         toast("Dados substituídos");
       }
       rebuildCatIndex(); buildCats();
@@ -3353,6 +3790,77 @@
     if (!file) return;
     var reader = new FileReader();
     reader.onload = function () { importJSON(String(reader.result)); };
+    reader.readAsText(file);
+    e.target.value = "";
+  });
+
+  function parseCsvLine(line, delim) {
+    var out = [], cur = "", inQ = false;
+    for (var i = 0; i < line.length; i++) {
+      var ch = line[i];
+      if (ch === '"') { if (inQ && line[i + 1] === '"') { cur += '"'; i++; } else inQ = !inQ; }
+      else if (ch === delim && !inQ) { out.push(cur); cur = ""; }
+      else cur += ch;
+    }
+    out.push(cur);
+    return out.map(function (s) { return String(s || "").trim(); });
+  }
+  function importCsv(text) {
+    var lines = String(text || "").replace(/^\uFEFF/, "").split(/\r?\n/).filter(function (l) { return l.trim(); });
+    if (!lines.length) { toast("CSV vazio"); return; }
+    var delim = (lines[0].split(";").length >= lines[0].split(",").length) ? ";" : ",";
+    var parsed = [];
+    var startIdx = 0;
+    var header = lines[0].toLowerCase();
+    if (/data|date|descricao|description|valor|value|amount/.test(header)) startIdx = 1;
+    for (var i = startIdx; i < lines.length; i++) {
+      var cols = parseCsvLine(lines[i], delim);
+      if (cols.length < 2) continue;
+      var data = "", desc = "", valor = NaN;
+      for (var j = 0; j < cols.length; j++) {
+        var cell = cols[j];
+        if (!data && /^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(cell)) data = parseOldDate(cell);
+        else if (!data && /^\d{4}-\d{2}-\d{2}$/.test(cell)) data = cell;
+        else if (!isFinite(valor) && /^-?[\d\.\s]+,?\d*$/.test(cell.replace(/[^\d.,-]/g, "")) && cell.replace(/[^\d.,-]/g, "").length > 0 && /\d/.test(cell)) {
+          var v = parseValor(cell.replace(/[^\d.,-]/g, ""));
+          if (isFinite(v) && v !== 0) valor = v;
+        }
+      }
+      desc = cols.filter(function (c) { return c && c !== data && String(parseValor(c.replace(/[^\d.,-]/g, ""))) !== String(valor); })
+        .filter(function (c) { return !/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(c) && !/^\d{4}-\d{2}-\d{2}$/.test(c); })
+        .join(" ").trim().slice(0, 60);
+      if (!isFinite(valor) || !desc) continue;
+      if (!data) data = todayISO();
+      parsed.push({ data: data, desc: desc, valor: Math.abs(valor), tipo: valor < 0 ? "saida" : "entrada" });
+    }
+    if (!parsed.length) { toast("Não encontrei lançamentos no CSV"); return; }
+    var seen = {};
+    state.transacoes.forEach(function (t) {
+      if (!t.deleted) seen[t.data + "|" + (t.descricao || "").toLowerCase() + "|" + t.valor.toFixed(2) + "|" + t.tipo] = true;
+    });
+    var fresh = parsed.filter(function (p) { return !seen[p.data + "|" + p.desc.toLowerCase() + "|" + p.valor.toFixed(2) + "|" + p.tipo]; });
+    if (!fresh.length) { toast("Todos já estavam importados"); return; }
+    confirmDialog("Importar CSV", "Encontramos " + fresh.length + " lançamento(s) novo(s) no arquivo (" + parsed.length + " no total). Toque em Mesclar para adicionar.").then(function (merge) {
+      if (merge === null) return;
+      var ts = Date.now();
+      fresh.forEach(function (p, idx) {
+        state.transacoes.push({
+          id: uid(), descricao: p.desc, valor: p.valor, tipo: p.tipo,
+          categoria: nlCategoria(p.desc), data: p.data,
+          dividaId: null, recebivelId: null, contaId: null, metaId: null,
+          parcelaGrupo: null, parcelaNum: 0, parcelaTotal: 0, serieId: null, periodo: null,
+          criadoEm: ts + idx, updatedAt: ts + idx, deleted: false
+        });
+      });
+      save(); render(); toast(fresh.length + " lançamento(s) importado(s)");
+    });
+  }
+  if ($("importCsvBtn")) $("importCsvBtn").addEventListener("click", function () { $("importCsvFile").click(); });
+  if ($("importCsvFile")) $("importCsvFile").addEventListener("change", function (e) {
+    var file = e.target.files && e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () { importCsv(String(reader.result)); };
     reader.readAsText(file);
     e.target.value = "";
   });
@@ -3476,6 +3984,7 @@
         state.recebiveis.forEach(function (r) { r.deleted = true; r.updatedAt = ts; });
         state.contas.forEach(function (c) { c.deleted = true; c.updatedAt = ts; });
         state.orcamentos.forEach(function (o) { o.deleted = true; o.updatedAt = ts; });
+        state.metas.forEach(function (o) { o.deleted = true; o.updatedAt = ts; });
         pruneTombstones();
       } else {
         state.transacoes = [];
@@ -3483,6 +3992,7 @@
         state.recebiveis = [];
         state.contas = [];
         state.orcamentos = [];
+        state.metas = [];
       }
       save(); render(); closeSheets(); toast("Dados apagados");
     });
@@ -3517,10 +4027,19 @@
   /* ---------------- Toast ---------------- */
   var toastEl = $("toast"), toastTimer = null;
   function toast(msg) {
-    toastEl.textContent = msg;
+    $("toastMsg").textContent = msg;
+    var b = $("toastBtn"); if (b) { b.hidden = true; b.textContent = ""; b.onclick = null; }
     toastEl.classList.add("show");
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { toastEl.classList.remove("show"); }, 2400);
+    toastTimer = setTimeout(function () { toastEl.classList.remove("show"); }, 2600);
+  }
+  function toastAction(msg, label, fn) {
+    $("toastMsg").textContent = msg;
+    var b = $("toastBtn");
+    if (b) { b.hidden = false; b.textContent = label; b.onclick = function () { toastEl.classList.remove("show"); clearTimeout(toastTimer); fn(); }; }
+    toastEl.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.classList.remove("show"); }, 6000);
   }
 
   /* ---------------- Confirm ---------------- */
@@ -3650,7 +4169,10 @@
     var g = state.orcamentos.map(function (o) {
       return "o" + o.id + ":" + (o.updatedAt || 0) + ":" + (o.deleted ? 1 : 0);
     });
-    return a.concat(b, c, e, f, g).sort().join("|");
+    var h2 = state.metas.map(function (o) {
+      return "m" + o.id + ":" + (o.updatedAt || 0) + ":" + (o.deleted ? 1 : 0);
+    });
+    return a.concat(b, c, e, f, g, h2).sort().join("|");
   }
   function mergeStates(msg) {
     var cvs = (!Array.isArray(msg) && msg && msg.c) || [];
@@ -3717,7 +4239,17 @@
     });
     if (ochanged) state.orcamentos = Object.keys(omap).map(function (k) { return omap[k]; });
 
-    return { changed: changed || dchanged || cchanged || rchanged || pchanged || ochanged, catsChanged: cchanged };
+    var mvs = (!Array.isArray(msg) && msg && msg.m) || [];
+    var mmap = {};
+    state.metas.forEach(function (o) { mmap[o.id] = o; });
+    var mchanged = false;
+    normalizeMetas(mvs).forEach(function (o) {
+      var cur = mmap[o.id];
+      if (!cur || (o.updatedAt || 0) > (cur.updatedAt || 0)) { mmap[o.id] = o; mchanged = true; }
+    });
+    if (mchanged) state.metas = Object.keys(mmap).map(function (k) { return mmap[k]; });
+
+    return { changed: changed || dchanged || cchanged || rchanged || pchanged || ochanged || mchanged, catsChanged: cchanged };
   }
 
   function statusLabel(kind) {
@@ -3831,7 +4363,7 @@
     if (!targets.length) return;
     var h = stateHash();
     if (h === sync.lastSentHash) return;
-    encryptJSON({ v: 3, t: state.transacoes, d: state.dividas, c: state.categorias, r: state.recebiveis, p: state.contas, o: state.orcamentos, at: Date.now() }).then(function (payload) {
+    encryptJSON({ v: 4, t: state.transacoes, d: state.dividas, c: state.categorias, r: state.recebiveis, p: state.contas, o: state.orcamentos, m: state.metas, at: Date.now() }).then(function (payload) {
       targets.forEach(function (c) { try { c.publish(sync.topic, payload, { qos: 1, retain: true }); } catch (e) {} });
       sync.lastSentHash = h;
     }).catch(function () {});
@@ -4073,6 +4605,7 @@
     state.recebiveis = normalizeRecebiveis(obj.r || []);
     state.contas = normalizeContas(obj.p || []);
     state.orcamentos = normalizeOrcamentos(obj.o || []);
+    state.metas = normalizeMetas(obj.m || []);
   }
 
   function cloudBusy(id, on) {
@@ -4238,17 +4771,20 @@
     $("tabDividas").classList.toggle("active", v === "dividas");
     $("tabReceber").classList.toggle("active", v === "receber");
     $("tabPagar").classList.toggle("active", v === "pagar");
+    $("tabMetas").classList.toggle("active", v === "metas");
     $("viewResumo").hidden = v !== "resumo";
     $("viewExtrato").hidden = v !== "extrato";
     $("viewDividas").hidden = v !== "dividas";
     $("viewReceber").hidden = v !== "receber";
     $("viewPagar").hidden = v !== "pagar";
+    $("viewMetas").hidden = v !== "metas";
   }
   $("tabResumo").addEventListener("click", function () { setView("resumo"); });
   $("tabExtrato").addEventListener("click", function () { setView("extrato"); });
   $("tabDividas").addEventListener("click", function () { setView("dividas"); });
   $("tabReceber").addEventListener("click", function () { setView("receber"); });
   $("tabPagar").addEventListener("click", function () { setView("pagar"); });
+  $("tabMetas").addEventListener("click", function () { setView("metas"); });
 
   /* ---------------- Notificações de vencimento ---------------- */
   function notifSupported() { return typeof window.Notification !== "undefined"; }
