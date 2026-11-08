@@ -92,6 +92,8 @@ supabase login
 supabase link --project-ref SEU_PROJECT_REF
 supabase functions deploy entitlement
 supabase functions deploy delete-account
+supabase functions deploy stripe-checkout
+supabase functions deploy stripe-portal
 supabase functions deploy stripe-webhook --no-verify-jwt
 supabase functions deploy google-play-verify
 supabase functions deploy google-play-rtdn --no-verify-jwt
@@ -113,15 +115,22 @@ já são injetadas automaticamente nas funções.)
 
 ## 5. Stripe (cobrança na web)
 
-1. Crie um **Produto** com um **Preço recorrente** (ex.: R$ 14,90/mês) — copie o `price_id` para `STRIPE_PRICE_ID`.
+1. Crie um **Produto** com **dois Preços recorrentes**: mensal (ex.: R$ 12,90/mês) e anual
+   (ex.: R$ 99/ano) — copie os `price_id` para `STRIPE_PRICE_MONTHLY_ID` /
+   `STRIPE_PRICE_YEARLY_ID` (e `STRIPE_PRICE_ID` como fallback).
 2. Crie um **Webhook** apontando para
    `https://SEU_PROJECT.supabase.co/functions/v1/stripe-webhook`
    com os eventos: `checkout.session.completed`,
    `customer.subscription.created`, `customer.subscription.updated`,
    `customer.subscription.deleted`. Copie o `whsec_...` para `STRIPE_WEBHOOK_SECRET`.
-3. No checkout (backend do app), crie a sessão passando
-   `metadata.household_id` e `client_reference_id = household_id`. É assim que o
-   webhook sabe a quem creditar o premium.
+3. Defina `APP_URL` com a URL pública do app (ex.: `https://seu-site.netlify.app`).
+4. No app, a tela de planos chama `POST /functions/v1/stripe-checkout` com
+   `{ cycle: "monthly" | "annual" }`; a função cria a sessão passando
+   `metadata.household_id` e `client_reference_id = household_id` (com 7 dias grátis).
+   É assim que o webhook sabe a quem creditar o premium. O botão
+   **Gerenciar assinatura** chama `POST /functions/v1/stripe-portal`, que abre o
+   portal do cliente Stripe (cancelar, trocar de plano, ver faturas). No portal,
+   ative **Customer portal → Settings** no painel da Stripe.
 
 ## 6. Google Play (Android / TWA)
 

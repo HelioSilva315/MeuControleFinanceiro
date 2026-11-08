@@ -431,6 +431,16 @@
   .sync-finger{font-size:12px;color:var(--faint);margin-top:6px}
   .sync-finger strong{color:var(--muted);letter-spacing:.08em}
 
+  .plans{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+  .plan{border:1px solid var(--line);border-radius:14px;padding:14px;background:var(--surface-2)}
+  .plan.pop{border-color:var(--btn-bg);background:var(--surface)}
+  .plan-name{font-size:12px;font-weight:650;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+  .plan-price{font-size:20px;font-weight:720;margin:6px 0 2px}
+  .plan-price small{font-size:12px;color:var(--faint);font-weight:500}
+  .plan-note{font-size:11.5px;color:var(--faint);margin-bottom:10px}
+  .plan .btn{width:100%;padding:10px}
+  .premium-feats{margin-top:12px;font-size:12.5px;color:var(--muted);line-height:1.7}
+
   /* ---------- Aviso de atualização ---------- */
   .updatebar{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translate(-50%,20px);z-index:90;background:var(--btn-bg);color:var(--btn-ink);font-size:13.5px;font-weight:550;padding:11px 16px;border-radius:12px;box-shadow:0 12px 30px -10px rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:.28s;max-width:92vw;display:flex;gap:12px;align-items:center}
   .updatebar.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
@@ -712,7 +722,7 @@
   </section>
 </div>
 
-<footer class="verbar">Nosso Caixa · versão <b id="verMark">v26</b><br><a href="./privacidade.html">Política de Privacidade</a> · <a href="./termos.html">Termos de Uso</a></footer>
+<footer class="verbar">Nosso Caixa · versão <b id="verMark">v27</b><br><a href="./privacidade.html">Política de Privacidade</a> · <a href="./termos.html">Termos de Uso</a></footer>
 
 <div id="printArea" aria-hidden="true"></div>
 
@@ -1090,6 +1100,36 @@
     </div>
     <div id="cloudSignedIn" hidden>
       <div class="sync-status"><span class="dot offline" id="cloudDot"></span><span id="cloudStatus">Conectando...</span></div>
+
+      <div id="premiumPlans" hidden>
+        <div class="set-title" style="margin-top:14px">Nosso Caixa Premium</div>
+        <div class="set-desc">Backup automático na nuvem, histórico ilimitado e relatórios avançados — para o casal inteiro, no preço de um cafezinho por mês.</div>
+        <div class="plans">
+          <div class="plan">
+            <div class="plan-name">Mensal</div>
+            <div class="plan-price">R$ 12,90<small>/mês</small></div>
+            <div class="plan-note">7 dias grátis · cancele quando quiser</div>
+            <button class="btn btn-ghost" id="planMonthly">Assinar mensal</button>
+          </div>
+          <div class="plan pop">
+            <div class="plan-name">Anual · popular</div>
+            <div class="plan-price">R$ 99<small>/ano</small></div>
+            <div class="plan-note">equivale a R$ 8,25/mês · economize 36%</div>
+            <button class="btn btn-primary" id="planAnnual">Assinar anual</button>
+          </div>
+        </div>
+        <div class="premium-feats">✓ Backup criptografado na nuvem<br>✓ Vale para os dois aparelhos do casal<br>✓ Cancele a qualquer momento no portal</div>
+        <div class="set-actions" style="margin-top:10px">
+          <button class="btn btn-ghost" id="cloudRestore">Restaurar compra</button>
+        </div>
+      </div>
+
+      <div id="premiumManage" hidden>
+        <div class="set-actions" style="margin-top:12px">
+          <button class="btn btn-ghost" id="cloudPortal">Gerenciar assinatura</button>
+        </div>
+      </div>
+
       <div class="set-actions" style="margin-top:12px">
         <button class="btn btn-primary" id="cloudUpload">Enviar para a nuvem</button>
         <button class="btn btn-ghost" id="cloudDownload">Restaurar da nuvem</button>
@@ -4695,22 +4735,78 @@
     if (st) st.textContent = "Conectado como " + (cloud.email || "sua conta") + (cloud.premium ? " · Premium" : "");
     var dot = $("cloudDot"); if (dot) dot.className = "dot " + (cloud.premium ? "online" : "offline");
     var up = $("cloudUpload"), down = $("cloudDownload"), note = $("cloudNote");
+    var plans = $("premiumPlans"), manage = $("premiumManage");
     if (cloud.premium) {
       if (up) up.hidden = false;
       if (down) down.hidden = false;
+      if (plans) plans.hidden = true;
+      if (manage) manage.hidden = false;
       if (note) note.textContent = cloud.until ? ("Premium ativo até " + new Date(cloud.until).toLocaleDateString("pt-BR") + ".") : "Recurso premium ativo.";
     } else {
       if (up) up.hidden = true;
       if (down) down.hidden = true;
-      if (note) note.textContent = "O backup na nuvem é um recurso premium. Assine no Android (Play) ou pela web para ativar.";
+      if (plans) plans.hidden = false;
+      if (manage) manage.hidden = true;
+      if (note) note.textContent = "O backup na nuvem é um recurso premium. Escolha um plano acima ou assine no Android (Play).";
     }
+  }
+
+  function cloudCheckout(cycle) {
+    if (!cloudConfigured()) { toast("Serviço de nuvem ainda não configurado"); return; }
+    if (!(cloud.session && cloud.session.a)) { toast("Entre na sua conta primeiro"); return; }
+    cloudBusy(cycle === "annual" ? "planAnnual" : "planMonthly", true);
+    cloudEnsureSession().then(function () {
+      return cloudFetch("/functions/v1/stripe-checkout", {
+        method: "POST",
+        json: { cycle: cycle, returnUrl: window.location.origin + window.location.pathname }
+      });
+    }).then(function (data) {
+      if (data && data.url) { window.location.href = data.url; }
+      else toast("Não foi possível iniciar o pagamento");
+    }).catch(function (e) { toast("Não deu para assinar: " + (e.message || e)); })
+      .then(function () { cloudBusy(cycle === "annual" ? "planAnnual" : "planMonthly", false); });
+  }
+  function cloudPortal() {
+    if (!cloudConfigured()) { toast("Serviço de nuvem ainda não configurado"); return; }
+    cloudBusy("cloudPortal", true);
+    cloudEnsureSession().then(function () {
+      return cloudFetch("/functions/v1/stripe-portal", {
+        method: "POST",
+        json: { returnUrl: window.location.origin + window.location.pathname }
+      });
+    }).then(function (data) {
+      if (data && data.url) { window.location.href = data.url; }
+      else toast("Nenhuma assinatura web encontrada. Assinaturas do Play são gerenciadas na Play Store.");
+    }).catch(function (e) { toast("Não deu para abrir: " + (e.message || e)); })
+      .then(function () { cloudBusy("cloudPortal", false); });
+  }
+  function cloudRestorePurchase() {
+    if (!cloudConfigured()) return;
+    cloudBusy("cloudRestore", true);
+    cloudLoadEntitlement().then(function () {
+      cloudRender();
+      toast(cloud.premium ? "Premium ativo! Obrigado." : "Nenhuma compra encontrada nesta conta. Se comprou no Play, confira se é o mesmo e-mail.");
+    }).catch(function (e) { toast("Não deu para verificar: " + (e.message || e)); })
+      .then(function () { cloudBusy("cloudRestore", false); });
   }
 
   function cloudInit() {
     cloudLoadSession();
     if (!cloudConfigured()) { cloudRender(); return; }
     cloudRender();
-    if (cloud.session && cloud.session.a) cloudLoadEntitlement().catch(function () {});
+    var params = new URLSearchParams(window.location.search || "");
+    var checkout = params.get("checkout");
+    if (checkout) {
+      try { window.history.replaceState(null, "", window.location.pathname); } catch (e) {}
+      if (checkout === "success") toast("Pagamento confirmado! Ativando premium...");
+      else if (checkout === "cancel") toast("Pagamento cancelado. Nenhum valor foi cobrado.");
+    }
+    if (cloud.session && cloud.session.a) {
+      cloudLoadEntitlement().then(function () {
+        cloudRender();
+        if (checkout === "success" && cloud.premium) toast("Premium ativo! Obrigado.");
+      }).catch(function () {});
+    }
   }
 
   if ($("cloudSignIn")) $("cloudSignIn").addEventListener("click", function () {
@@ -4758,6 +4854,10 @@
   if ($("cloudUpload")) $("cloudUpload").addEventListener("click", cloudUpload);
   if ($("cloudDownload")) $("cloudDownload").addEventListener("click", cloudDownload);
   if ($("cloudDelete")) $("cloudDelete").addEventListener("click", cloudDeleteAccount);
+  if ($("planMonthly")) $("planMonthly").addEventListener("click", function () { cloudCheckout("monthly"); });
+  if ($("planAnnual")) $("planAnnual").addEventListener("click", function () { cloudCheckout("annual"); });
+  if ($("cloudPortal")) $("cloudPortal").addEventListener("click", cloudPortal);
+  if ($("cloudRestore")) $("cloudRestore").addEventListener("click", cloudRestorePurchase);
 
   /* ---------------- Tema ---------------- */
   function applyTheme(t) {
