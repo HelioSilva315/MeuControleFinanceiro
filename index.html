@@ -606,7 +606,7 @@
         <button type="button" class="btn btn-primary" id="csvBtn">Exportar CSV</button>
         <button type="button" class="btn btn-ghost" id="pdfBtn">Relatório (PDF)</button>
       </div>
-      <div class="sync-note">O CSV abre no Excel/Planilhas Google. O PDF usa a impressão do navegador (\u201cSalvar como PDF\u201d).</div>
+      <div class="sync-note" id="repNote">O CSV abre no Excel/Planilhas Google. O PDF usa a impressão do navegador (\u201cSalvar como PDF\u201d). <strong>Recurso premium.</strong></div>
     </section>
 
     <section class="panel">
@@ -722,7 +722,7 @@
   </section>
 </div>
 
-<footer class="verbar">Nosso Caixa · versão <b id="verMark">v28</b><br><a href="./privacidade.html">Política de Privacidade</a> · <a href="./termos.html">Termos de Uso</a></footer>
+<footer class="verbar">Nosso Caixa · versão <b id="verMark">v29</b><br><a href="./privacidade.html">Política de Privacidade</a> · <a href="./termos.html">Termos de Uso</a></footer>
 
 <div id="printArea" aria-hidden="true"></div>
 
@@ -3942,7 +3942,14 @@
       return true;
     } catch (e) { return false; }
   }
+  function requirePremium(feature) {
+    if (typeof cloud !== "undefined" && cloud.premium) return true;
+    toast((feature || "Este recurso") + " é premium. Assine para liberar.");
+    setTimeout(function () { cloudRender(); openSheet("settingsSheet"); }, 600);
+    return false;
+  }
   function exportMonthCSV() {
+    if (!requirePremium("Relatórios (CSV/PDF)")) return;
     var y = state.view.y, m = state.view.m;
     var data = monthItems(y, m), md = data.md;
     var lines = [["Data", "Descrição", "Categoria", "Tipo", "Valor (R$)"].join(";")];
@@ -3966,6 +3973,7 @@
     } else { toast("Não foi possível exportar"); }
   }
   function printMonthReport() {
+    if (!requirePremium("Relatórios (CSV/PDF)")) return;
     var area = $("printArea"); if (!area) return;
     var y = state.view.y, m = state.view.m;
     var data = monthItems(y, m), md = data.md;
