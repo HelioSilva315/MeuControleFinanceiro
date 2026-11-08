@@ -718,11 +718,11 @@
       <span class="hint" id="metasCount">—</span>
     </div>
     <div id="metasList"></div>
-    <p class="sync-note">Aportar registra uma saída (categoria Investimentos) e retirar registra uma entrada. Assim o saldo do mês reflete o dinheiro reservado.</p>
+    <p class="sync-note">Aportar registra uma saída (categoria Investimentos) e retirar registra uma entrada. Assim o saldo do mês reflete o dinheiro reservado. <strong>Criar metas é recurso premium.</strong></p>
   </section>
 </div>
 
-<footer class="verbar">Nosso Caixa · versão <b id="verMark">v29</b><br><a href="./privacidade.html">Política de Privacidade</a> · <a href="./termos.html">Termos de Uso</a></footer>
+<footer class="verbar">Nosso Caixa · versão <b id="verMark">v30</b><br><a href="./privacidade.html">Política de Privacidade</a> · <a href="./termos.html">Termos de Uso</a></footer>
 
 <div id="printArea" aria-hidden="true"></div>
 
@@ -1118,7 +1118,7 @@
             <button class="btn btn-primary" id="planAnnual">Assinar anual</button>
           </div>
         </div>
-        <div class="premium-feats">✓ Backup criptografado na nuvem<br>✓ Vale para os dois aparelhos do casal<br>✓ Cancele a qualquer momento no portal</div>
+        <div class="premium-feats">✓ Backup criptografado na nuvem<br>✓ Metas e relatórios PDF/CSV<br>✓ Vale para os dois aparelhos do casal<br>✓ Cancele a qualquer momento no portal</div>
         <div class="set-actions" style="margin-top:10px">
           <button class="btn btn-ghost" id="cloudRestore">Restaurar compra</button>
         </div>
@@ -3593,6 +3593,7 @@
   function tempoTitleMeta(m, tipo) { return (tipo === "saida" ? "Aportar na meta: " : "Retirar da meta: ") + m.nome; }
 
   function openMetaForm(meta) {
+    if (!meta && !requirePremium("Metas")) return;
     var form = $("metaForm");
     form.reset();
     var actions = $("metaActions");
