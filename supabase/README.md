@@ -115,8 +115,8 @@ já são injetadas automaticamente nas funções.)
 
 ## 5. Stripe (cobrança na web)
 
-1. Crie um **Produto** com **dois Preços recorrentes**: mensal (ex.: R$ 12,90/mês) e anual
-   (ex.: R$ 99/ano) — copie os `price_id` para `STRIPE_PRICE_MONTHLY_ID` /
+1. Crie um **Produto** com **dois Preços recorrentes**: mensal (**R$ 4,99/mês**) e anual
+   (**R$ 50/ano**) — copie os `price_id` para `STRIPE_PRICE_MONTHLY_ID` /
    `STRIPE_PRICE_YEARLY_ID` (e `STRIPE_PRICE_ID` como fallback).
 2. Crie um **Webhook** apontando para
    `https://SEU_PROJECT.supabase.co/functions/v1/stripe-webhook`
