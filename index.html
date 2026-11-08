@@ -431,6 +431,11 @@
   .sync-finger{font-size:12px;color:var(--faint);margin-top:6px}
   .sync-finger strong{color:var(--muted);letter-spacing:.08em}
 
+  /* ---------- Aviso de atualização ---------- */
+  .updatebar{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translate(-50%,20px);z-index:90;background:var(--btn-bg);color:var(--btn-ink);font-size:13.5px;font-weight:550;padding:11px 16px;border-radius:12px;box-shadow:0 12px 30px -10px rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:.28s;max-width:92vw;display:flex;gap:12px;align-items:center}
+  .updatebar.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+  .updatebar button{font-weight:700;text-decoration:underline;text-underline-offset:2px;flex:none}
+
   /* ---------- Toast ---------- */
   .toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translate(-50%,20px);z-index:80;background:var(--btn-bg);color:var(--btn-ink);font-size:13.5px;font-weight:550;padding:11px 18px;border-radius:12px;box-shadow:0 12px 30px -10px rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:.28s;max-width:90vw;text-align:center;display:flex;gap:12px;align-items:center}
   .toast.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
@@ -707,7 +712,7 @@
   </section>
 </div>
 
-<footer class="verbar">Nosso Caixa · versão <b id="verMark">v23</b><br><a href="./privacidade.html">Política de Privacidade</a> · <a href="./termos.html">Termos de Uso</a></footer>
+<footer class="verbar">Nosso Caixa · versão <b id="verMark">v24</b><br><a href="./privacidade.html">Política de Privacidade</a> · <a href="./termos.html">Termos de Uso</a></footer>
 
 <div id="printArea" aria-hidden="true"></div>
 
@@ -1187,6 +1192,8 @@
     </div>
   </div>
 </div>
+
+<div class="updatebar" id="updateBar" hidden><span id="updateMsg">Nova versão disponível</span><button id="updateBtn" type="button">Atualizar</button></div>
 
 <div class="toast" id="toast"><span id="toastMsg"></span><button id="toastBtn" type="button" hidden></button></div>
 
@@ -5099,8 +5106,58 @@
   });
 
   if ("serviceWorker" in navigator) {
+    var swReg = null;
+    var reloadingForUpdate = false;
+    function showUpdateBar(ver) {
+      var bar = $("updateBar");
+      if (!bar || bar.classList.contains("show")) return;
+      $("updateMsg").textContent = "Nova versão disponível" + (ver ? " (" + ver + ")" : "");
+      bar.hidden = false;
+      bar.classList.add("show");
+    }
+    function checkForUpdate() {
+      if (!("serviceWorker" in navigator)) return;
+      if (swReg && swReg.waiting) showUpdateBar();
+      fetch("./index.html?ts=" + Date.now(), { cache: "no-store" })
+        .then(function (r) { return r.text(); })
+        .then(function (html) {
+          var m = html.match(/id="verMark">(v\d+)</);
+          var atual = $("verMark") ? $("verMark").textContent : "";
+          if (m && atual && m[1] !== atual) showUpdateBar(m[1]);
+        })
+        .catch(function () {});
+    }
     window.addEventListener("load", function () {
-      navigator.serviceWorker.register("./sw.js").catch(function () {});
+      navigator.serviceWorker.register("./sw.js").then(function (reg) {
+        swReg = reg;
+        if (reg.waiting) showUpdateBar();
+        reg.addEventListener("updatefound", function () {
+          var worker = reg.installing;
+          if (!worker) return;
+          worker.addEventListener("statechange", function () {
+            if (worker.state === "installed" && reg.waiting && navigator.serviceWorker.controller) showUpdateBar();
+          });
+        });
+        reg.update().catch(function () {});
+        checkForUpdate();
+        setInterval(function () { if (document.visibilityState === "visible") { reg.update().catch(function () {}); checkForUpdate(); } }, 10 * 60 * 1000);
+        document.addEventListener("visibilitychange", function () {
+          if (document.visibilityState === "visible") { reg.update().catch(function () {}); checkForUpdate(); }
+        });
+      }).catch(function () {});
+      navigator.serviceWorker.addEventListener("controllerchange", function () {
+        if (reloadingForUpdate) return;
+        reloadingForUpdate = true;
+        window.location.reload();
+      });
+    });
+    if ($("updateBtn")) $("updateBtn").addEventListener("click", function () {
+      if (swReg && swReg.waiting) {
+        swReg.waiting.postMessage("SKIP_WAITING");
+        setTimeout(function () { window.location.reload(); }, 800);
+      } else {
+        window.location.reload();
+      }
     });
   }
 

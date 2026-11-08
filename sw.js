@@ -1,4 +1,4 @@
-const CACHE = "nosso-caixa-v23";
+const CACHE = "nosso-caixa-v24";
 const ASSETS = [
   "./",
   "./index.html",
@@ -15,10 +15,17 @@ const ASSETS = [
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE)
-      .then((cache) => cache.addAll(ASSETS))
+      .then(async (cache) => {
+        // Um asset que falhe nao pode travar a atualizacao inteira.
+        await Promise.allSettled(ASSETS.map((a) => cache.add(a)));
+      })
       .then(() => self.skipWaiting())
-      .catch(() => {})
+      .catch(() => self.skipWaiting())
   );
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data === "SKIP_WAITING") self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
